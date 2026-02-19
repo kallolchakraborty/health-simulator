@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Simulator</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <!-- 
+        Main Application Container 
+        Using a Flex-column layout to handle the sticky header and footer 
+    -->
+    <div class="app-container">
+        <!-- Header -->
+        <header class="top-bar">
+            <div class="logo">
+                <span class="logo-circle">HS</span>
+                <span class="logo-text">HEALTH SIMULATOR</span>
+            </div>
+            <div class="patient-info">
+                <div class="avatar">
+                    <img src="https://ui-avatars.com/api/?name=Kallol+C&background=random&color=fff"
+                        alt="Patient Avatar">
+                </div>
+                <div class="details">
+                    <h1 class="name">CHAKRABORTY, KALLOL <span class="gender">(Male)</span></h1>
+                    <p class="id">Patient ID: 007</p>
+                </div>
+            </div>
+            <div class="status-panel">
+                <div class="condition">Condition: <span class="status-good" id="patient-status">GOOD</span></div>
+                <div class="location"><span class="room">Room 007</span></div>
+            </div>
+            <button class="settings-btn" id="toggle-controls">SETTINGS</button>
+        </header>
+
+        <!-- 
+            Main Dashboard Viewport
+            Utilizes CSS Grid for the 3-column / 2-row clinical monitoring layout 
+        -->
+        <main class="dashboard-grid">
+            <!-- ECG Graph -->
+            <div class="panel ecg-panel">
+                <div class="panel-header">
+                    ECG
+                    <button id="show-info-btn" class="icon-btn" title="Clinical Reference"></button>
+                </div>
+                <div class="canvas-container">
+                    <canvas id="ecgCanvas"></canvas>
+                </div>
+            </div>
+
+            <!-- Heart Rate -->
+            <div class="panel hr-panel">
+                <div class="panel-header">
+                    HR
+                    <button id="show-hr-info-btn" class="icon-btn" title="Heart Rate Reference"></button>
+                </div>
+                <div class="metric-display">
+                    <span class="value" id="hr-value">105</span>
+                    <span class="unit">bpm</span>
+                </div>
+            </div>
+
+            <!-- Blood Pressure -->
+            <div class="panel bp-panel">
+                <div class="panel-header">
+                    BLOOD PRESSURE
+                    <button id="show-bp-info-btn" class="icon-btn" title="Blood Pressure Reference"></button>
+                </div>
+                <div class="bp-display">
+                    <div class="bp-metric">
+                        <span class="label">SYS</span>
+                        <span class="value" id="bp-sys">120</span>
+                    </div>
+                    <div class="divider">/</div>
+                    <div class="bp-metric">
+                        <span class="label">DIA</span>
+                        <span class="value" id="bp-dia">78</span>
+                    </div>
+                </div>
+                <div class="bp-unit">mmHg</div>
+            </div>
+
+            <!-- Pleth Graph -->
+            <div class="panel pleth-panel">
+                <div class="panel-header">
+                    PLETH
+                    <button id="show-pleth-info-btn" class="icon-btn" title="Pleth Reference"></button>
+                </div>
+                <div class="canvas-container">
+                    <canvas id="plethCanvas"></canvas>
+                </div>
+            </div>
+
+            <!-- SpO2 -->
+            <div class="panel spo2-panel">
+                <div class="panel-header">
+                    SpO₂
+                    <button id="show-spo2-info-btn" class="icon-btn" title="SpO₂ Reference"></button>
+                </div>
+                <div class="metric-display">
+                    <span class="value warning" id="spo2-value">93</span>
+                    <span class="unit">%</span>
+                </div>
+            </div>
+
+            <!-- Body Temperature Panel -->
+            <div class="panel temp-panel">
+                <div class="panel-header">
+                    TEMP
+                    <button id="show-temp-info-btn" class="icon-btn" title="Temperature Reference"></button>
+                </div>
+                <div class="metric-display">
+                    <span class="value" id="temp-value">36.8</span>
+                    <span class="unit" id="temp-unit">°C</span>
+                </div>
+                <div class="temp-meta">
+                    <span class="site">ORAL</span>
+                    <span class="range" id="temp-range">36.1-37.9</span>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer Navigation -->
+        <nav class="bottom-nav">
+            <button class="nav-btn active" id="btn-home">
+                <span class="label">Home</span>
+            </button>
+            <button class="nav-btn" id="btn-ecg">
+                <span class="label">ECG</span>
+            </button>
+            <button class="nav-btn" id="btn-spo2">
+                <span class="label">SpO₂ Pulse</span>
+            </button>
+            <button class="nav-btn" id="btn-bp">
+                <span class="label">NIBP</span>
+            </button>
+            <button class="nav-btn" id="btn-records">
+                <span class="label">TEMP</span>
+            </button>
+            <button class="nav-btn" id="btn-alarms">
+                <span class="label">Alarms</span>
+            </button>
+            <button class="nav-btn call-btn" id="btn-call">
+                <span class="label">Nurse Call</span>
+            </button>
+        </nav>
+    </div> <!-- End .app-container -->
+
+    <!-- 
+        CLINICAL CONTROL CENTER (Actionable Panel)
+        Allows real-time modification of simulation state 
+    -->
+    <div id="controls-panel" class="controls-panel hidden">
+        <h3>Simulation Settings</h3>
+
+        <!-- Accordion 1: ECG & HR -->
+        <div class="accordion-item">
+            <button class="accordion-header">ECG & Heart Rate</button>
+            <div class="accordion-content">
+                <div class="control-group">
+                    <label>Heart Rate (BPM): <span id="hr-display">105</span></label>
+                    <input type="range" id="hr-control" min="40" max="180" value="105">
+                </div>
+                <div class="control-group">
+                    <label>PR Interval (ms): <span id="pr-display">160</span></label>
+                    <input type="range" id="pr-control" min="120" max="220" value="160">
+                </div>
+                <div class="control-group">
+                    <label>QRS Duration (ms): <span id="qrs-display">80</span></label>
+                    <input type="range" id="qrs-control" min="60" max="120" value="80">
+                </div>
+                <div class="control-group">
+                    <label>ST Elevation (mV): <span id="st-display">0</span></label>
+                    <input type="range" id="st-control" min="-0.5" max="0.5" step="0.05" value="0">
+                </div>
+                <div class="control-group">
+                    <label>Amplitude (Gain): <span id="amp-display">1.0</span>x</label>
+                    <input type="range" id="amp-control" min="0.5" max="3.0" step="0.1" value="1.0">
+                </div>
+                <div class="control-group">
+                    <label>Noise Level: <span id="noise-display">Low</span></label>
+                    <input type="range" id="noise-control" min="0" max="50" value="5">
+                </div>
+            </div>
+        </div>
+
+        <!-- Accordion 2: Blood Pressure -->
+        <div class="accordion-item">
+            <button class="accordion-header">Blood Pressure</button>
+            <div class="accordion-content">
+                <div class="control-group">
+                    <label>Systolic BP: <span id="sys-display">120</span></label>
+                    <input type="range" id="sys-control" min="80" max="200" value="120">
+                </div>
+                <div class="control-group">
+                    <label>Diastolic BP: <span id="dia-display">78</span></label>
+                    <input type="range" id="dia-control" min="50" max="120" value="78">
+                </div>
+            </div>
+        </div>
+
+        <!-- Accordion 3: SpO2 -->
+        <div class="accordion-item">
+            <button class="accordion-header">SpO₂ Pulse Oximetry</button>
+            <div class="accordion-content">
+                <div class="control-group">
+                    <label>SpO₂ (%): <span id="spo2-display">93</span></label>
+                    <input type="range" id="spo2-control" min="80" max="100" value="93">
+                </div>
+            </div>
+        </div>
+
+        <!-- Accordion 4: Temperature -->
+        <div class="accordion-item">
+            <button class="accordion-header">Body Temperature</button>
+            <div class="accordion-content">
+                <div class="control-group">
+                    <label>Temp Unit:</label>
+                    <select id="temp-unit-control" class="medical-select">
+                        <option value="C" selected>Celsius (°C)</option>
+                        <option value="F">Fahrenheit (°F)</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>Temp (°C/°F): <span id="temp-display">36.8</span></label>
+                    <input type="range" id="temp-control" min="34" max="42" step="0.1" value="36.8">
+                </div>
+                <div class="control-group">
+                    <label>Site:</label>
+                    <select id="temp-site-control" class="medical-select">
+                        <option value="Oral" selected>Oral (36.1-37.2)</option>
+                        <option value="Rectal">Rectal (36.6-38.0)</option>
+                        <option value="Axillary">Axillary (35.5-37.0)</option>
+                        <option value="Tympanic">Tympanic (36.1-37.9)</option>
+                        <option value="Temporal">Temporal (36.1-37.5)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <button id="close-controls">Close</button>
+    </div>
+
+    <!-- 
+        REFERENCE MODAL SYSTEM
+        Provides clinical context and validation metrics for each vital sign 
+    -->
+
+    <!-- ECG Clinical Analysis -->
+    <div id="info-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>ECG Waveform Reference</h2>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <canvas id="refCanvas" width="600" height="200"></canvas>
+                <table class="clinical-table">
+                    <thead>
+                        <tr>
+                            <th>Feature</th>
+                            <th>Description</th>
+                            <th>Normal Duration</th>
+                            <th>Clinical Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>P wave</td>
+                            <td>Atrial depolarization</td>
+                            <td>
+                                <80 ms</td>
+                            <td>Tall/peaked = right atrial enlargement</td>
+                        </tr>
+                        <tr>
+                            <td>PR interval</td>
+                            <td>Atria to ventricles conduction</td>
+                            <td>120-200 ms</td>
+                            <td>>200 ms = 1st degree AV block</td>
+                        </tr>
+                        <tr>
+                            <td>QRS complex</td>
+                            <td>Ventricular depolarization</td>
+                            <td>80-100 ms</td>
+                            <td>>120 ms = bundle branch block</td>
+                        </tr>
+                        <tr>
+                            <td>ST segment</td>
+                            <td>Ventricular plateau phase</td>
+                            <td>Isoelectric</td>
+                            <td>Elevation/depression = ischemia</td>
+                        </tr>
+                        <tr>
+                            <td>T wave</td>
+                            <td>Ventricular repolarization</td>
+                            <td>~160 ms</td>
+                            <td>Inverted = ischemia/LVH</td>
+                        </tr>
+                        <tr>
+                            <td>QTc interval</td>
+                            <td>Full ventricular cycle</td>
+                            <td>
+                                <440 /460 ms</td>
+                            <td>Prolonged = arrhythmia risk</td>
+                        </tr>
+                        <tr>
+                            <td>U wave</td>
+                            <td>Possible Purkinje repolarization</td>
+                            <td>Low amplitude</td>
+                            <td>Prominent = hypokalemia</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pleth Clinical Reference Modal -->
+    <div id="pleth-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Plethysmographic Waveform Reference</h2>
+                <span class="close-modal" id="close-pleth-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <canvas id="plethRefCanvas" width="600" height="180"></canvas>
+                <table class="clinical-table">
+                    <thead>
+                        <tr>
+                            <th>Index / Feature</th>
+                            <th>Description</th>
+                            <th>Normal / Threshold</th>
+                            <th>Clinical Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Perfusion Index (PI)</td>
+                            <td>AC/DC ratio ×100% — perfusion quality</td>
+                            <td>&gt;1.5–2% good; &lt;0.5% poor</td>
+                            <td>Low PI = vasoconstriction, poor peripheral perfusion</td>
+                        </tr>
+                        <tr>
+                            <td>Pleth Variability Index (PVI)</td>
+                            <td>Respiratory variation in amplitude</td>
+                            <td>&lt;10–15% (fluid responsive if &gt;13–20% ventilated)</td>
+                            <td>Elevated PVI in ventilated patients predicts fluid responsiveness</td>
+                        </tr>
+                        <tr>
+                            <td>Simple Systolic Ratio (SSR)</td>
+                            <td>Max / min peak amplitude ratio</td>
+                            <td>~1.0–1.5; &gt;1.5 = fluid responsive</td>
+                            <td>SSR &gt;1.5 indicates significant respiratory variation</td>
+                        </tr>
+                        <tr>
+                            <td>Amplitude</td>
+                            <td>Peak-to-trough height</td>
+                            <td>&gt;2–5% of DC baseline (device-dependent)</td>
+                            <td>Low amplitude = hypoperfusion or signal artifact</td>
+                        </tr>
+                        <tr>
+                            <td>Upstroke (Systolic)</td>
+                            <td>Rapid rise to systolic peak</td>
+                            <td>Sharp, steep</td>
+                            <td>Blunted upstroke = reduced cardiac output or arterial stiffness</td>
+                        </tr>
+                        <tr>
+                            <td>Dicrotic Notch</td>
+                            <td>Small notch after systolic peak — aortic valve closure</td>
+                            <td>Visible in healthy adults</td>
+                            <td>Absent notch = vasodilation / sepsis; exaggerated = hypovolemia</td>
+                        </tr>
+                        <tr>
+                            <td>Diastolic Decay</td>
+                            <td>Gradual fall after dicrotic notch</td>
+                            <td>Smooth, exponential</td>
+                            <td>Rapid decay = low peripheral resistance; slow = high resistance</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- SpO2 Clinical Reference Modal -->
+    <div id="spo2-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>SpO₂ Reference Ranges</h2>
+                <span class="close-modal" id="close-spo2-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <canvas id="spo2RefCanvas" width="600" height="180"></canvas>
+                <table class="clinical-table">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>SpO₂ Range (%)</th>
+                            <th>Clinical Notes</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>🟢 Normal</td>
+                            <td>95 – 100%</td>
+                            <td>Optimal oxygenation; healthy adults at sea level</td>
+                            <td>No intervention required</td>
+                        </tr>
+                        <tr>
+                            <td>🟡 Acceptable</td>
+                            <td>92 – 94%</td>
+                            <td>Tolerated in lung/heart disease patients</td>
+                            <td>Monitor closely; consider supplemental O₂</td>
+                        </tr>
+                        <tr>
+                            <td>🟠 Mild Hypoxemia</td>
+                            <td>90 – 91%</td>
+                            <td>Below safe threshold for most patients</td>
+                            <td>Supplemental oxygen indicated</td>
+                        </tr>
+                        <tr>
+                            <td>🔴 Moderate Hypoxemia</td>
+                            <td>85 – 89%</td>
+                            <td>Significant hypoxemia; organ stress likely</td>
+                            <td>Oxygen therapy required; escalate care</td>
+                        </tr>
+                        <tr>
+                            <td>⚠️ Severe Hypoxemia</td>
+                            <td>&lt; 85%</td>
+                            <td>Critical; risk of organ failure</td>
+                            <td>Emergency intervention</td>
+                        </tr>
+                        <tr>
+                            <td>👶 Pediatric (Infants)</td>
+                            <td>≥ 96%</td>
+                            <td>Higher threshold for neonates</td>
+                            <td>Alert if &lt; 95%</td>
+                        </tr>
+                        <tr>
+                            <td>🏔️ High Altitude / Smokers</td>
+                            <td>2–5% lower baseline</td>
+                            <td>Adjusted norms; compare against patient baseline</td>
+                            <td>Use trending, not single value</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- HR Clinical Reference Modal -->
+    <div id="hr-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Heart Rate Reference</h2>
+                <span class="close-modal" id="close-hr-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <canvas id="hrRefCanvas" width="600" height="180"></canvas>
+                <table class="clinical-table">
+                    <thead>
+                        <tr>
+                            <th>Category / Age Group</th>
+                            <th>Normal Resting HR (bpm)</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>🔵 Bradycardia</td>
+                            <td>&lt; 60 bpm</td>
+                            <td>Normal in athletes; symptomatic = investigate</td>
+                        </tr>
+                        <tr>
+                            <td>🟢 Adults (18+) — Normal</td>
+                            <td>60 – 100 bpm</td>
+                            <td>50–90 bpm is optimal fitness range</td>
+                        </tr>
+                        <tr>
+                            <td>🟡 Tachycardia</td>
+                            <td>&gt; 100 bpm at rest</td>
+                            <td>Monitor for AFib (irregular RR on ECG)</td>
+                        </tr>
+                        <tr>
+                            <td>👶 Children (5–12 yrs)</td>
+                            <td>75 – 118 bpm</td>
+                            <td>Higher due to metabolic rate</td>
+                        </tr>
+                        <tr>
+                            <td>🐶 Infants</td>
+                            <td>100 – 160 bpm</td>
+                            <td>Peaks ~10 weeks gestation</td>
+                        </tr>
+                        <tr>
+                            <td>🏃 Exercise — Moderate Zone</td>
+                            <td>50–70% max HR</td>
+                            <td>Max HR = 220 − age (e.g., age 40 = 90–126 bpm)</td>
+                        </tr>
+                        <tr>
+                            <td>🔥 Exercise — Target Zone</td>
+                            <td>70–85% max HR</td>
+                            <td>e.g., age 40 = 126–153 bpm; cardiovascular benefit</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Blood Pressure Clinical Reference Modal -->
+    <div id="bp-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Blood Pressure Reference (AHA/ACC)</h2>
+                <span class="close-modal" id="close-bp-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <canvas id="bpRefCanvas" width="600" height="280"></canvas>
+                <table class="clinical-table">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Systolic (mmHg)</th>
+                            <th>Diastolic (mmHg)</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>🔵 Hypotension</td>
+                            <td>&lt; 90</td>
+                            <td>&lt; 60</td>
+                            <td>Dizziness, fainting; treat if symptomatic</td>
+                        </tr>
+                        <tr>
+                            <td>🟢 Normal</td>
+                            <td>&lt; 120</td>
+                            <td>&lt; 80</td>
+                            <td>Optimal health; maintain lifestyle</td>
+                        </tr>
+                        <tr>
+                            <td>🟡 Elevated</td>
+                            <td>120 – 129</td>
+                            <td>&lt; 80</td>
+                            <td>Lifestyle intervention: diet, exercise</td>
+                        </tr>
+                        <tr>
+                            <td>🟠 Hypertension Stage 1</td>
+                            <td>130 – 139</td>
+                            <td>80 – 89</td>
+                            <td>Medication considered alongside lifestyle changes</td>
+                        </tr>
+                        <tr>
+                            <td>🔴 Hypertension Stage 2</td>
+                            <td>≥ 140</td>
+                            <td>≥ 90</td>
+                            <td>Medication required; urgent if &gt;180/120</td>
+                        </tr>
+                        <tr>
+                            <td>👨 Adults 18–39 (avg)</td>
+                            <td>Men 119 / Women 110</td>
+                            <td>Men 70 / Women 68</td>
+                            <td>Gender-based baseline differences</td>
+                        </tr>
+                        <tr>
+                            <td>👩‍🦳 Adults 60+ (avg)</td>
+                            <td>133 – 139</td>
+                            <td>~69</td>
+                            <td>Age-related arterial stiffness; monitor closely</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Temperature Reference Modal -->
+    <div id="temp-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Body Temperature Reference</h2>
+                <span class="close-modal" id="close-temp-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <table class="clinical-table">
+                    <thead>
+                        <tr>
+                            <th>Severity</th>
+                            <th>Oral/Rectal (°C)</th>
+                            <th>Clinical Guidance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>🟢 Normal</td>
+                            <td>36.1 - 37.9</td>
+                            <td>Routine monitoring</td>
+                        </tr>
+                        <tr>
+                            <td>🟡 Low-grade</td>
+                            <td>38.0 - 39.0</td>
+                            <td>Hydration, rest; antipyretics optional</td>
+                        </tr>
+                        <tr>
+                            <td>🟠 Moderate</td>
+                            <td>39.1 - 40.0</td>
+                            <td>Medical review if persistent</td>
+                        </tr>
+                        <tr>
+                            <td>🔴 High</td>
+                            <td>40.1 - 41.0</td>
+                            <td>Urgent evaluation, cooling measures</td>
+                        </tr>
+                        <tr>
+                            <td>🚨 Hyperpyrexia</td>
+                            <td>> 41.0</td>
+                            <td>Emergency (risk of seizures/organ damage)</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div style="margin-top: 15px; font-size: 0.75rem; color: #94a3b8; line-height: 1.4;">
+                    <p><strong>Note:</strong> Oral is standard reference; adjust rectal +0.5°C, axillary -0.5°C.</p>
+                    <p><strong>Dashboard Alert:</strong> Triggered at ≥38°C with symptom correlation.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <footer class="app-footer">
+        Made with <span class="heart">❤️</span> by
+        <a href="https://www.linkedin.com/in/kallol-chakraborty-9728a699/" target="_blank"
+            rel="noopener noreferrer">Kallol Chakraborty</a>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
