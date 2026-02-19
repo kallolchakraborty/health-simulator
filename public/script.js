@@ -23,6 +23,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Timeline Simulation Logic ---
     let timelineData = [];
     let startTime = 0;
+    let lastBeatTime = 0;
+
+    // --- Graph Draw State ---
+    let ecgX = 0;
+    let lastEcgY = 0;
+    let lastPlethY = 0;
+    let noiseOffset = 0;
 
     // DOM Elements
     const hrValue = document.getElementById('hr-value');
@@ -158,14 +165,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const ecgParent = ecgCanvas.parentElement;
         const plethParent = plethCanvas.parentElement;
 
-        // Only resize if the parent is actually visible (non-zero dimensions)
-        if (ecgParent.clientWidth > 0 && ecgParent.clientHeight > 0) {
+        if (ecgParent && ecgParent.clientWidth > 0 && ecgParent.clientHeight > 0) {
             ecgCanvas.width = ecgParent.clientWidth;
             ecgCanvas.height = ecgParent.clientHeight;
+            lastEcgY = ecgCanvas.height / 2; // Initialize vertical start to center
         }
-        if (plethParent.clientWidth > 0 && plethParent.clientHeight > 0) {
+        if (plethParent && plethParent.clientWidth > 0 && plethParent.clientHeight > 0) {
             plethCanvas.width = plethParent.clientWidth;
             plethCanvas.height = plethParent.clientHeight;
+            lastPlethY = plethCanvas.height * 0.85; // Initialize vertical start to base
         }
     }
 
@@ -979,17 +987,9 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.fillText('SYS / DIA Classification (AHA/ACC)', ml, mt - 10);
     }
 
-    // --- Main Loop ---
-    let ecgX = 0;
-    let lastEcgY = 0;
-    let lastPlethY = 0;
-    let noiseOffset = 0;
-
     /**
      * Principal Animation & Simulation Loop
      * Synchronized to the display refresh rate (usually 60Hz).
-     * Handles timeline sequencing, natural vitals drift, alarm checking,
-     * and high-fidelity waveform drawing.
      */
     function animate(timestamp) {
         // Start timeline on first frame

@@ -61,54 +61,69 @@ The project is built using a modern, zero-dependency "Vanilla Plus" approach for
 
 ## 🛠 Technical Function Reference
 
-The core logic of the simulator is contained within `script.js`. This section provides a detailed technical breakdown of every major functional component.
+The core logic of the simulator is contained within `script.js`. This section provides an exhaustive technical breakdown of every functional component.
 
 ### 🛡 Core Engine & Lifecycle
 - **`loadData()`**: 
   - *Type*: Async
-  - *Purpose*: Fetches `data.json` to initialize the session. Populates patient metadata (Name, ID, Room) and loads the longitudinal `timelineData` array which dictates vital sign changes over hours or minutes.
+  - *Purpose*: Fetches `data.json` to initialize the session. 
+  - *Logic*: Populates patient metadata (Name, ID, Room) via DOM manipulation. It loads the longitudinal `timelineData` array and sets the initial state derived from the first timeline point or `baseVitals`.
 - **`animate(timestamp)`**: 
-  - *Type*: Animation Loop (`requestAnimationFrame`)
-  - *Purpose*: The heart of the simulation. Synchronized to the display refresh rate (60Hz), it handles:
-    - **Timeline Sequencing**: Mapping elapsed time to specific vital sign targets.
-    - **Physiological Drift**: Injecting natural, beat-driven fluctuations into vitals for realism.
-    - **Waveform Scanning**: Calculating the precise pixel coordinates for the ECG and Pleth sweeps.
+  - *Type*: High-Frequency Loop (`requestAnimationFrame`)
+  - *Purpose*: The engine's cardiac pacemaker.
+  - *Timeline Logic*: Maps `elapsedMinutes` to indices in `timelineData` (samples every 5 seconds) to automatically drive vitals over time.
+  - *Cardiac Timing*: Calculates `beatDuration` (60000 / HR). Triggers at the exact millisecond a new beat should occur to synchronize physical "thumping" effects and data fluctuations.
+  - *Coordinate Sweep*: Manages the horizontal `ecgX` variable, handling "wrap-around" logic and clearing a "scan bar" ahead of the waveform to simulate an analog phosphor monitor.
 - **`resizeCanvases()`**: 
-  - *Type*: Window Resident
-  - *Purpose*: Calculates the exact width and height of canvas elements based on their parent grid containers. Crucial for maintaining waveform resolution and prevents image stretching during browser resizing.
+  - *Type*: Layout Listener
+  - *Purpose*: Event-driven function (attached to `window.resize`) that recalibrates canvas pixel density. It ensures clinical waveforms remain sharp and correctly scaled when the browser window or the dashboard layout changes.
 
 ### 🧬 Physiological Modeling (Waveform Synthesis)
 - **`getEcgSignal(t_ms)`**: 
-  - *Model*: Composite Gaussian Synthesis
-  - *Details*: Calculates the Y-offset for a cardiac cycle at a given millisecond. It adds multiple Gaussian waves to create the P-wave, Q-Complex, R-Peak, S-Complex, and T-wave. Responds dynamically to HR and user-defined PR/QRS intervals.
+  - *Model*: Lead II Gaussian Summation
+  - *Details*: Synthesizes a complex voltage-time curve.
+    - **P-Wave**: $0.15 \times \exp(-(t-80)^2 / 2(40/3)^2)$
+    - **QRS**: Sharp negative Q, sharp positive R ($1.0 \times$ Gain), and negative S.
+    - **T-Wave**: Broad positive curve representing repolarization.
+    - **U-Wave**: Subtle late curve.
+  - *Dynamic Inputs*: Responds to `ecgPR`, `ecgQRS`, `ecgST` (elevation/depression), and `ecgAmp` gain.
 - **`getPlethSignal(phase)`**: 
-  - *Model*: Sine-Decay with Dicrotic Notch
-  - *Details*: Represents Infrared absorption in the finger. Uses a rapid sine upstroke for systole and an exponential decay for diastole, with a small Gaussian 'bump' to represent the aortic valve closure (dicrotic notch).
+  - *Model*: Dicrotic Sine-Exponential Hybrid
+  - *Details*: Simulates infrared light absorption in tissue.
+    - **Systolic Phase (0-0.2)**: Rapid sine-wave upstroke.
+    - **Diastolic Phase (0.2-1.0)**: Exponential decay with a Gaussian bump at phase 0.3 to simulate the dicrotic notch (aortic valve closure).
 
-### 🏥 Clinical Logic & State Management
+### 🏥 Clinical Logic & Interaction
 - **`checkAlarms()`**: 
-  - *Logic*: Threshold Evaluation
-  - *Details*: Continuously evaluates current vitals against clinical safety ranges. It triggers visual alerts (blinking) and updates the patient status (`GOOD`, `UNSTABLE`, `CRITICAL`) based on parameters like SpO₂ < 92% or BP > 140/90.
+  - *Type*: Diagnostic Parser
+  - *Logic*: Evaluates current `hr`, `spo2`, `bp`, and `temp` against standard ACLS/ACCP thresholds. 
+  - *Statuses*:
+    - `CRITICAL`: Triggered by extreme values (e.g., HR < 40 or SpO₂ < 85%). Activates `status-critical` blinking.
+    - `UNSTABLE`: Triggered by out-of-range but non-life-threatening values.
+    - `GOOD`: All parameters within safe margins.
 - **`updateUIFromState()`**: 
-  - *Role*: Synchronization Layer
-  - *Details*: Standardizes the UI state. When parameters change (via timeline or user slider), this function updates all labels, displays, and control settings throughout the app to maintain data integrity.
-- **`formatTemp(celsius)` / `formatRange(rangeStr)`**: 
-  - *Role*: Unit Conversion Utility
-  - *Details*: Handles mathematical conversion (C ↔ F) and string formatting. Ensures that regardless of the display unit, the underlying clinical logic remains grounded in precise Celsius values.
+  - *Type*: Synchronizer
+  - *Details*: One-way data binding from the internal `state` object to the UI labels, slider positions, and unit displays. This is called during initialization and unit toggle events to ensure the interface reflects internal math.
 
-### 📊 Visualization & Reference Rendering
-- **`draw[Vital]Reference()`**: 
-  - *Category*: Canvas Drawing Suite
-  - *Functions*: `drawReferenceModal` (ECG), `drawHrReference`, `drawBpReference`, etc.
-  - *Details*: Uses Canvas `roundRect`, `stroke`, and `fillText` APIs to render detailed clinical maps. These functions draw categorized medical "danger zones" (e.g., Hypertension stages or Hypoxemia levels) and place a live needle indicating where the patient currently falls on that scale.
+### 📈 Clinical Reference Suite (Modal Rendering)
+Each function below utilizes the Canvas 2D API to render a baseline clinical "Gold Standard" for comparison:
+- **`drawReferenceModal()`**: Draws the annotated ECG complex with PR/QRS interval brackets and P/R/T peak labels.
+- **`drawPlethReference()`**: Renders the Pleth pulse curve with "Upstroke", "Ejection", and "Diastolic Decay" zone annotations.
+- **`drawSpo2Reference()`**: Generates a color-coded saturation bar (Normal/Hypoxemia zones) with a live needle tracking the patient's current oxygenation.
+- **`drawHrReference()`**: Renders a frequency-based scale (Brady/Normal/Tachy) with age-adjusted exercise zone brackets.
+- **`drawBpReference()`**: Creates a 2D coordinate plot (Systolic vs Diastolic) mapping the current BP point onto AHA/ACC classification rectangles (Normal/Elevated/HTN Stage 1/2).
 
-### 🧭 Navigation & Interaction
+### ⚙️ UI Utilities & Effects
 - **`setActiveView(viewClass, btnId)`**: 
-  - *Logic*: Grid Orchestrator
-  - *Details*: Manages transitions between "Home" dashboard and "Focused" single-vital views. It toggles CSS layout classes and ensures canvases are cleared and waveforms are reset to coordinate `(0, y)` to avoid visual artifacts during transitions.
-- **Accordion & Modal Listeners**: 
-  - *Role*: UI Interaction
-  - *Details*: Standardized listeners that handle the state of slide-out settings and clinical information overlays using CSS classes for hardware-accelerated animations.
+  - *Engine*: Grid Orchestrator
+  - *Details*: Toggles CSS classes on the `.dashboard-grid` to trigger smooth layout transitions. It includes a dual-stage `setTimeout` to ensure canvases are resized and cleared *after* the DOM has settled into its new configuration.
+- **`formatTemp(c)` / `formatRange(str)`**: 
+  - *Logic*: Unit Translation
+  - *Math*: $(C \times 9/5) + 32$ for Fahrenheit conversion. Ensures clinical ranges stay numerically accurate when switching display units.
+- **Nurse Call Effect**: 
+  - *Details*: An inline logic block within the `btn-call` listener that procedurally generates "snowflake" elements with randomized horizontal drift, falling speeds, and font sizes to simulate an emergency alert "frost" over the UI.
+
+## 👨‍🎓 Attribution
 
 ## 👨‍🎓 Attribution
 
