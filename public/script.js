@@ -17,7 +17,8 @@ document.addEventListener('DOMContentLoaded', () => {
         tempSite: 'Oral',    // Measurement site designation
         tempUnit: 'C',       // Active unit ('C' or 'F')
         ecgSpeed: 3,         // Waveform sweep speed (pixels per frame)
-        lastFluctuation: 0   // Timestamp of last natural vital drift
+        lastFluctuation: 0,  // Timestamp of last natural vital drift
+        isManualMode: false  // If true, ignore timeline data
     };
 
     // --- Timeline Simulation Logic ---
@@ -997,7 +998,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!lastBeatTime) lastBeatTime = timestamp;
 
         // 1. Update Simulation State from Time-based sequences
-        if (timelineData.length > 0) {
+        // 1. Update Targets from Timeline (if enabled)
+        if (timelineData.length > 0 && !state.isManualMode) {
             const elapsedMinutes = (timestamp - startTime) / 60000;
             // Map timeline data to 5-second intervals
             let idx = Math.floor(elapsedMinutes * 12);
@@ -1345,7 +1347,17 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-bp').addEventListener('click', () => setActiveView('view-bp', 'btn-bp'));
     document.getElementById('btn-records').addEventListener('click', () => setActiveView('view-records', 'btn-records'));
 
+    function triggerManualOverride() {
+        if (!state.isManualMode) {
+            state.isManualMode = true;
+            const modeSelect = document.getElementById('sim-mode');
+            if (modeSelect) modeSelect.value = 'manual';
+            console.log("Manual Override activated via user input.");
+        }
+    }
+
     hrControl.addEventListener('input', (e) => {
+        triggerManualOverride();
         const val = parseInt(e.target.value);
         state.hrTarget = val;
         hrDisplay.innerText = val;
@@ -1354,6 +1366,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     spo2Control.addEventListener('input', (e) => {
+        triggerManualOverride();
         const val = parseInt(e.target.value);
         state.spo2Target = val;
         spo2Display.innerText = val;
@@ -1362,6 +1375,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     sysControl.addEventListener('input', (e) => {
+        triggerManualOverride();
         state.sys = parseInt(e.target.value);
         sysDisplay.innerText = state.sys;
         sysValue.innerText = state.sys;
@@ -1369,6 +1383,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     diaControl.addEventListener('input', (e) => {
+        triggerManualOverride();
         state.dia = parseInt(e.target.value);
         diaDisplay.innerText = state.dia;
         diaValue.innerText = state.dia;
@@ -1421,6 +1436,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     tempControl?.addEventListener('input', (e) => {
+        triggerManualOverride();
         const val = parseFloat(e.target.value);
         if (state.tempUnit === 'F') {
             state.tempTarget = (val - 32) * 5 / 9;
@@ -1445,16 +1461,33 @@ document.addEventListener('DOMContentLoaded', () => {
         if (tempRangeValue) tempRangeValue.innerText = formatRange(siteRanges[site]);
     });
 
-    // --- Accordion Logic ---
+    // Mode Selector Logic
+    const simModeSelect = document.getElementById('sim-mode');
+    simModeSelect?.addEventListener('change', (e) => {
+        state.isManualMode = (e.target.value === 'manual');
+        if (!state.isManualMode) {
+            // Reset start time so timeline resumes smoothly or restarts
+            startTime = performance.now();
+        }
+    });
+
+    // --- Accordion Logic (Exclusive Behavior) ---
     const accHeaders = document.querySelectorAll('.accordion-header');
     accHeaders.forEach(header => {
         header.addEventListener('click', () => {
-            // Toggle active state
-            header.classList.toggle('active');
+            const isActive = header.classList.contains('active');
 
-            // Toggle panel visibility
-            const panel = header.nextElementSibling;
-            panel.classList.toggle('active');
+            // 1. Close all first
+            accHeaders.forEach(h => {
+                h.classList.remove('active');
+                h.nextElementSibling.classList.remove('active');
+            });
+
+            // 2. If it wasn't active, open it now
+            if (!isActive) {
+                header.classList.add('active');
+                header.nextElementSibling.classList.add('active');
+            }
         });
     });
 });
