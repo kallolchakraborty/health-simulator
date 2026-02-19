@@ -106,7 +106,7 @@ The core logic of the simulator is contained within `public/script.js`.
 
 ## 👨‍🎓 Attribution
 
-Designed and Developed with ❤️ by [Kallol Chakraborty](https://www.linkedin.com/in/kallol-chakraborty-9728a699/).
+Designed and Developed with ❤️ by [Kallol Chakraborty](https://github.com/kallolchakraborty).
 
 ---
 *Disclaimer: This is a simulation tool for educational and design purposes only. It is not intended for actual medical diagnosis or treatment.*

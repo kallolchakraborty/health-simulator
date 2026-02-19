@@ -161,6 +161,14 @@
     <div id="controls-panel" class="controls-panel hidden">
         <h3>Simulation Settings</h3>
 
+        <div class="control-group">
+            <label>Control Mode:</label>
+            <select id="sim-mode" class="medical-select" style="margin-bottom: 15px; border: 1px solid #3b82f6;">
+                <option value="timeline">Auto (Follow Timeline)</option>
+                <option value="manual">Manual (Override)</option>
+            </select>
+        </div>
+
         <!-- Accordion 1: ECG & HR -->
         <div class="accordion-item">
             <button class="accordion-header">ECG & Heart Rate</button>
@@ -638,8 +646,7 @@
 
     <footer class="app-footer">
         Made with <span class="heart">❤️</span> by
-        <a href="https://www.linkedin.com/in/kallol-chakraborty-9728a699/" target="_blank"
-            rel="noopener noreferrer">Kallol Chakraborty</a>
+        <a href="https://github.com/kallolchakraborty" target="_blank" rel="noopener noreferrer">Kallol Chakraborty</a>
     </footer>
 
     <script src="script.js"></script>
