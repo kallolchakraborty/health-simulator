@@ -52,6 +52,9 @@ let currentStats = getSafeStats();
 
 // Middleware: Visitor tracking & Security
 app.use((req, res, next) => {
+    const requestedPath = req.path;
+    const requestedFile = path.basename(requestedPath);
+
     // 1. Block access to any sensitive system files via URL
     const sensitiveFiles = [
         'server.js',
@@ -59,24 +62,28 @@ app.use((req, res, next) => {
         'package.json',
         'package-lock.json',
         '.gitignore',
-        'render.yaml',
-        'generate_data.py'
+        'render.yaml'
     ];
 
-    const requestedFile = path.basename(req.url.split('?')[0]);
-    if (sensitiveFiles.includes(requestedFile)) {
-        return res.status(403).send('Forbidden: Access is denied.');
+    // Check both the filename itself AND common paths
+    const isSensitive = sensitiveFiles.includes(requestedFile) ||
+        requestedPath.includes('.git') ||
+        requestedPath.includes('node_modules');
+
+    if (isSensitive) {
+        return res.status(403).send('<h1>403 Forbidden: Access to system assets is restricted.</h1>');
     }
 
-    // 2. Count visitors on root entry
-    if (req.method === 'GET' && (req.url === '/' || req.url === '/index.html')) {
+    // 2. Count visitors on entry
+    // Only increment when the main entry page is loaded
+    if (requestedPath === '/' || requestedPath === '/index.html') {
         const data = getSafeStats();
         data.visitorCount++;
         saveSafeStats(data);
         currentStats = data;
     }
 
-    // 3. Prevent clickjacking
+    // 3. Prevent clickjacking & other security headers
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('X-Content-Type-Options', 'nosniff');
 
