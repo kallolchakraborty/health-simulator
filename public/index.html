@@ -6,9 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Health Simulator</title>
     <link
-        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Inter+Tight:wght@700;800;900&family=IBM+Plex+Mono:wght@400;500;600;700&family=Silkscreen:wght@400;700&display=swap"
         rel="stylesheet">
+    <link href="https://fonts.cdnfonts.com/css/harabara" rel="stylesheet">
+    <link href="https://fonts.cdnfonts.com/css/visitor-tt1-brk" rel="stylesheet">
+    <link href="https://fonts.cdnfonts.com/css/the-visitor" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 
 <body>
@@ -16,28 +21,57 @@
         Main Application Container 
         Using a Flex-column layout to handle the sticky header and footer 
     -->
+    <!-- Global Page Header -->
+    <header class="page-header">
+        <div class="header-content">
+            <div class="main-logo">
+                <img src="logo.png" alt="Health Simulator Logo" class="brand-logo">
+                <h1 class="brand-name">HEALTH SIMULATOR</h1>
+            </div>
+            <div class="header-actions">
+                <div class="social-actions">
+                    <button id="btn-like" class="action-btn like">
+                        <i class="fa-solid fa-thumbs-up"></i>
+                        <span id="like-count">0</span>
+                    </button>
+                    <button id="btn-dislike" class="action-btn dislike">
+                        <i class="fa-solid fa-thumbs-down"></i>
+                        <span id="dislike-count">0</span>
+                    </button>
+                </div>
+                <div class="visitor-stats">
+                    <span class="visitor-label">LIVE VISITORS</span>
+                    <span class="visitor-count" id="visitor-count">1,248</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
     <div class="app-container">
         <!-- Header -->
         <header class="top-bar">
-            <div class="logo">
-                <span class="logo-circle">HS</span>
-                <span class="logo-text">HEALTH SIMULATOR</span>
-            </div>
+
             <div class="patient-info">
-                <div class="avatar">
-                    <img src="https://ui-avatars.com/api/?name=Kallol+C&background=random&color=fff"
-                        alt="Patient Avatar">
-                </div>
+                <div class="avatar-initials" id="patient-initials">KC</div>
                 <div class="details">
-                    <h1 class="name">CHAKRABORTY, KALLOL <span class="gender">(Male)</span></h1>
-                    <p class="id">Patient ID: 007</p>
+                    <h1 class="name">CHAKRABORTY, KALLOL (Male)</h1>
+                    <p class="id">Patient ID: <span class="val">007</span></p>
                 </div>
             </div>
             <div class="status-panel">
-                <div class="condition">Condition: <span class="status-good" id="patient-status">GOOD</span></div>
-                <div class="location"><span class="room">Room 007</span></div>
+                <div class="status-item">
+                    <div class="condition">Condition</div>
+                    <span id="patient-status" class="status-good">GOOD</span>
+                </div>
+                <div class="status-item">
+                    <div class="location">Location</div>
+                    <span class="room">Room 007</span>
+                </div>
             </div>
-            <button class="settings-btn" id="toggle-controls">SETTINGS</button>
+            <button class="nav-btn header-nav-btn" id="toggle-controls">
+                <i class="fa-solid fa-sliders icon"></i>
+                <span class="label">Settings</span>
+            </button>
         </header>
 
         <!-- 
@@ -49,7 +83,9 @@
             <div class="panel ecg-panel">
                 <div class="panel-header">
                     ECG
-                    <button id="show-info-btn" class="icon-btn" title="Clinical Reference"></button>
+                    <button id="show-info-btn" class="icon-trigger-btn" title="ECG Clinical Reference">
+                        <i class="fa-solid fa-circle-info"></i>
+                    </button>
                 </div>
                 <div class="canvas-container">
                     <canvas id="ecgCanvas"></canvas>
@@ -60,7 +96,9 @@
             <div class="panel hr-panel">
                 <div class="panel-header">
                     HR
-                    <button id="show-hr-info-btn" class="icon-btn" title="Heart Rate Reference"></button>
+                    <button id="show-hr-info-btn" class="icon-trigger-btn" title="Heart Rate Reference">
+                        <i class="fa-solid fa-circle-info"></i>
+                    </button>
                 </div>
                 <div class="metric-display">
                     <span class="value" id="hr-value">105</span>
@@ -72,7 +110,9 @@
             <div class="panel bp-panel">
                 <div class="panel-header">
                     BLOOD PRESSURE
-                    <button id="show-bp-info-btn" class="icon-btn" title="Blood Pressure Reference"></button>
+                    <button id="show-bp-info-btn" class="icon-trigger-btn" title="Blood Pressure Reference">
+                        <i class="fa-solid fa-circle-info"></i>
+                    </button>
                 </div>
                 <div class="bp-display">
                     <div class="bp-metric">
@@ -92,7 +132,9 @@
             <div class="panel pleth-panel">
                 <div class="panel-header">
                     PLETH
-                    <button id="show-pleth-info-btn" class="icon-btn" title="Pleth Reference"></button>
+                    <button id="show-pleth-info-btn" class="icon-trigger-btn" title="Pleth Reference">
+                        <i class="fa-solid fa-circle-info"></i>
+                    </button>
                 </div>
                 <div class="canvas-container">
                     <canvas id="plethCanvas"></canvas>
@@ -103,7 +145,9 @@
             <div class="panel spo2-panel">
                 <div class="panel-header">
                     SpO₂
-                    <button id="show-spo2-info-btn" class="icon-btn" title="SpO₂ Reference"></button>
+                    <button id="show-spo2-info-btn" class="icon-trigger-btn" title="SpO₂ Reference">
+                        <i class="fa-solid fa-circle-info"></i>
+                    </button>
                 </div>
                 <div class="metric-display">
                     <span class="value warning" id="spo2-value">93</span>
@@ -115,7 +159,9 @@
             <div class="panel temp-panel">
                 <div class="panel-header">
                     TEMP
-                    <button id="show-temp-info-btn" class="icon-btn" title="Temperature Reference"></button>
+                    <button id="show-temp-info-btn" class="icon-trigger-btn" title="Temperature Reference">
+                        <i class="fa-solid fa-circle-info"></i>
+                    </button>
                 </div>
                 <div class="metric-display">
                     <span class="value" id="temp-value">36.8</span>
@@ -131,24 +177,31 @@
         <!-- Footer Navigation -->
         <nav class="bottom-nav">
             <button class="nav-btn active" id="btn-home">
+                <i class="fa-solid fa-house icon"></i>
                 <span class="label">Home</span>
             </button>
             <button class="nav-btn" id="btn-ecg">
+                <i class="fa-solid fa-wave-square icon"></i>
                 <span class="label">ECG</span>
             </button>
             <button class="nav-btn" id="btn-spo2">
+                <i class="fa-solid fa-lungs icon"></i>
                 <span class="label">SpO₂ Pulse</span>
             </button>
             <button class="nav-btn" id="btn-bp">
+                <i class="fa-solid fa-droplet icon"></i>
                 <span class="label">NIBP</span>
             </button>
             <button class="nav-btn" id="btn-records">
+                <i class="fa-solid fa-temperature-half icon"></i>
                 <span class="label">TEMP</span>
             </button>
             <button class="nav-btn" id="btn-alarms">
+                <i class="fa-solid fa-triangle-exclamation icon"></i>
                 <span class="label">Alarms</span>
             </button>
             <button class="nav-btn call-btn" id="btn-call">
+                <i class="fa-solid fa-phone icon"></i>
                 <span class="label">Nurse Call</span>
             </button>
         </nav>
@@ -158,103 +211,124 @@
         CLINICAL CONTROL CENTER (Actionable Panel)
         Allows real-time modification of simulation state 
     -->
-    <div id="controls-panel" class="controls-panel hidden">
-        <h3>Simulation Settings</h3>
+    <div id="settings-modal" class="modal hidden">
+        <div id="controls-panel" class="controls-panel">
+            <div class="panel-header-alt">
+                <h3 class="settings-title"><i class="fa-solid fa-gears"></i> Simulation Settings</h3>
+                <span id="close-controls-top" class="close-modal">&times;</span>
+            </div>
 
-        <div class="control-group">
-            <label>Control Mode:</label>
-            <select id="sim-mode" class="medical-select" style="margin-bottom: 15px; border: 1px solid #3b82f6;">
-                <option value="timeline">Auto (Follow Timeline)</option>
-                <option value="manual">Manual (Override)</option>
-            </select>
-        </div>
+            <div class="control-group">
+                <label>Control Mode:</label>
+                <select id="sim-mode" class="medical-select">
+                    <option value="timeline">Auto (Follow Timeline)</option>
+                    <option value="manual">Manual (Override)</option>
+                </select>
+            </div>
 
-        <!-- Accordion 1: ECG & HR -->
-        <div class="accordion-item">
-            <button class="accordion-header">ECG & Heart Rate</button>
-            <div class="accordion-content">
-                <div class="control-group">
-                    <label>Heart Rate (BPM): <span id="hr-display">105</span></label>
-                    <input type="range" id="hr-control" min="40" max="180" value="105">
+            <!-- Accordion items scroll area -->
+            <div class="accordion-scroll-area"
+                style="max-height: 55vh; overflow-y: auto; margin-bottom: 20px; padding-right: 12px; margin-right: -12px;">
+                <!-- Accordion 1: ECG & HR -->
+                <div class="accordion-item">
+                    <button class="accordion-header">
+                        <span><i class="fa-solid fa-heart-pulse"></i> ECG & Heart Rate</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </button>
+                    <div class="accordion-content">
+                        <div class="control-group">
+                            <label>Heart Rate (BPM): <span id="hr-display">105</span></label>
+                            <input type="range" id="hr-control" min="40" max="180" value="105">
+                        </div>
+                        <div class="control-group">
+                            <label>PR Interval (ms): <span id="pr-display">160</span></label>
+                            <input type="range" id="pr-control" min="120" max="220" value="160">
+                        </div>
+                        <div class="control-group">
+                            <label>QRS Duration (ms): <span id="qrs-display">80</span></label>
+                            <input type="range" id="qrs-control" min="60" max="120" value="80">
+                        </div>
+                        <div class="control-group">
+                            <label>ST Elevation (mV): <span id="st-display">0</span></label>
+                            <input type="range" id="st-control" min="-0.5" max="0.5" step="0.05" value="0">
+                        </div>
+                        <div class="control-group">
+                            <label>Amplitude (Gain): <span id="amp-display">1.0</span>x</label>
+                            <input type="range" id="amp-control" min="0.5" max="3.0" step="0.1" value="1.0">
+                        </div>
+                        <div class="control-group">
+                            <label>Noise Level: <span id="noise-display">Low</span></label>
+                            <input type="range" id="noise-control" min="0" max="50" value="5">
+                        </div>
+                    </div>
                 </div>
-                <div class="control-group">
-                    <label>PR Interval (ms): <span id="pr-display">160</span></label>
-                    <input type="range" id="pr-control" min="120" max="220" value="160">
+
+                <!-- Accordion 2: Blood Pressure -->
+                <div class="accordion-item">
+                    <button class="accordion-header">
+                        <span><i class="fa-solid fa-droplet"></i> Blood Pressure</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </button>
+                    <div class="accordion-content">
+                        <div class="control-group">
+                            <label>Systolic BP: <span id="sys-display">120</span></label>
+                            <input type="range" id="sys-control" min="80" max="200" value="120">
+                        </div>
+                        <div class="control-group">
+                            <label>Diastolic BP: <span id="dia-display">78</span></label>
+                            <input type="range" id="dia-control" min="50" max="120" value="78">
+                        </div>
+                    </div>
                 </div>
-                <div class="control-group">
-                    <label>QRS Duration (ms): <span id="qrs-display">80</span></label>
-                    <input type="range" id="qrs-control" min="60" max="120" value="80">
+
+                <!-- Accordion 3: SpO2 -->
+                <div class="accordion-item">
+                    <button class="accordion-header">
+                        <span><i class="fa-solid fa-lungs"></i> SpO₂ Pulse Oximetry</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </button>
+                    <div class="accordion-content">
+                        <div class="control-group">
+                            <label>SpO₂ (%): <span id="spo2-display">93</span></label>
+                            <input type="range" id="spo2-control" min="80" max="100" value="93">
+                        </div>
+                    </div>
                 </div>
-                <div class="control-group">
-                    <label>ST Elevation (mV): <span id="st-display">0</span></label>
-                    <input type="range" id="st-control" min="-0.5" max="0.5" step="0.05" value="0">
-                </div>
-                <div class="control-group">
-                    <label>Amplitude (Gain): <span id="amp-display">1.0</span>x</label>
-                    <input type="range" id="amp-control" min="0.5" max="3.0" step="0.1" value="1.0">
-                </div>
-                <div class="control-group">
-                    <label>Noise Level: <span id="noise-display">Low</span></label>
-                    <input type="range" id="noise-control" min="0" max="50" value="5">
+
+                <!-- Accordion 4: Temperature -->
+                <div class="accordion-item">
+                    <button class="accordion-header">
+                        <span><i class="fa-solid fa-temperature-half"></i> Body Temperature</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </button>
+                    <div class="accordion-content">
+                        <div class="control-group">
+                            <label>Temp Unit:</label>
+                            <select id="temp-unit-control" class="medical-select">
+                                <option value="C" selected>Celsius (°C)</option>
+                                <option value="F">Fahrenheit (°F)</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label>Temp (°C/°F): <span id="temp-display">36.8</span></label>
+                            <input type="range" id="temp-control" min="34" max="42" step="0.1" value="36.8">
+                        </div>
+                        <div class="control-group">
+                            <label>Site:</label>
+                            <select id="temp-site-control" class="medical-select">
+                                <option value="Oral" selected>Oral (36.1-37.2)</option>
+                                <option value="Rectal">Rectal (36.6-38.0)</option>
+                                <option value="Axillary">Axillary (35.5-37.0)</option>
+                                <option value="Tympanic">Tympanic (36.1-37.9)</option>
+                                <option value="Temporal">Temporal (36.1-37.5)</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Accordion 2: Blood Pressure -->
-        <div class="accordion-item">
-            <button class="accordion-header">Blood Pressure</button>
-            <div class="accordion-content">
-                <div class="control-group">
-                    <label>Systolic BP: <span id="sys-display">120</span></label>
-                    <input type="range" id="sys-control" min="80" max="200" value="120">
-                </div>
-                <div class="control-group">
-                    <label>Diastolic BP: <span id="dia-display">78</span></label>
-                    <input type="range" id="dia-control" min="50" max="120" value="78">
-                </div>
-            </div>
+            <button id="close-controls" class="close-modal-btn">Close</button>
         </div>
-
-        <!-- Accordion 3: SpO2 -->
-        <div class="accordion-item">
-            <button class="accordion-header">SpO₂ Pulse Oximetry</button>
-            <div class="accordion-content">
-                <div class="control-group">
-                    <label>SpO₂ (%): <span id="spo2-display">93</span></label>
-                    <input type="range" id="spo2-control" min="80" max="100" value="93">
-                </div>
-            </div>
-        </div>
-
-        <!-- Accordion 4: Temperature -->
-        <div class="accordion-item">
-            <button class="accordion-header">Body Temperature</button>
-            <div class="accordion-content">
-                <div class="control-group">
-                    <label>Temp Unit:</label>
-                    <select id="temp-unit-control" class="medical-select">
-                        <option value="C" selected>Celsius (°C)</option>
-                        <option value="F">Fahrenheit (°F)</option>
-                    </select>
-                </div>
-                <div class="control-group">
-                    <label>Temp (°C/°F): <span id="temp-display">36.8</span></label>
-                    <input type="range" id="temp-control" min="34" max="42" step="0.1" value="36.8">
-                </div>
-                <div class="control-group">
-                    <label>Site:</label>
-                    <select id="temp-site-control" class="medical-select">
-                        <option value="Oral" selected>Oral (36.1-37.2)</option>
-                        <option value="Rectal">Rectal (36.6-38.0)</option>
-                        <option value="Axillary">Axillary (35.5-37.0)</option>
-                        <option value="Tympanic">Tympanic (36.1-37.9)</option>
-                        <option value="Temporal">Temporal (36.1-37.5)</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-
-        <button id="close-controls">Close</button>
     </div>
 
     <!-- 
@@ -266,7 +340,7 @@
     <div id="info-modal" class="modal hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>ECG Waveform Reference</h2>
+                <h2><i class="fa-solid fa-wave-square"></i> ECG Waveform Reference</h2>
                 <span class="close-modal">&times;</span>
             </div>
             <div class="modal-body">
@@ -282,48 +356,85 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td>P wave</td>
+                            <td><i class="fa-solid fa-circle-nodes"></i> P wave</td>
                             <td>Atrial depolarization</td>
-                            <td>
-                                <80 ms</td>
-                            <td>Tall/peaked = right atrial enlargement</td>
+                            <td>&lt;120 ms</td>
+                            <td>Tall/Peaked = RA enlargement; Bifid = LA enlargement</td>
                         </tr>
                         <tr>
-                            <td>PR interval</td>
-                            <td>Atria to ventricles conduction</td>
+                            <td><i class="fa-solid fa-bolt-lightning"></i> PR interval</td>
+                            <td>AV node conduction time</td>
                             <td>120-200 ms</td>
-                            <td>>200 ms = 1st degree AV block</td>
+                            <td>&gt;200ms = 1st Degree Block; &lt;120ms = WPW Syndrome</td>
                         </tr>
                         <tr>
-                            <td>QRS complex</td>
+                            <td><i class="fa-solid fa-heart-pulse"></i> QRS complex</td>
                             <td>Ventricular depolarization</td>
-                            <td>80-100 ms</td>
-                            <td>>120 ms = bundle branch block</td>
+                            <td>70-110 ms</td>
+                            <td>&gt;120ms = LBBB / RBBB or Ventricular Pace</td>
                         </tr>
                         <tr>
-                            <td>ST segment</td>
+                            <td><i class="fa-solid fa-minus"></i> ST segment</td>
                             <td>Ventricular plateau phase</td>
                             <td>Isoelectric</td>
-                            <td>Elevation/depression = ischemia</td>
+                            <td>Elevation = MI (STEMI); Depression = Ischemia</td>
                         </tr>
                         <tr>
-                            <td>T wave</td>
+                            <td><i class="fa-solid fa-wave-square"></i> T wave</td>
                             <td>Ventricular repolarization</td>
                             <td>~160 ms</td>
-                            <td>Inverted = ischemia/LVH</td>
+                            <td>Tall/Tented = Hyperkalemia; Inverted = Ischemia</td>
                         </tr>
                         <tr>
-                            <td>QTc interval</td>
-                            <td>Full ventricular cycle</td>
-                            <td>
-                                <440 /460 ms</td>
-                            <td>Prolonged = arrhythmia risk</td>
+                            <td><i class="fa-solid fa-stopwatch"></i> QTc interval</td>
+                            <td>Cycle time (rate-corrected)</td>
+                            <td>350-440 ms</td>
+                            <td>Prolonged = Risk of Torsades de Pointes</td>
                         </tr>
                         <tr>
-                            <td>U wave</td>
-                            <td>Possible Purkinje repolarization</td>
-                            <td>Low amplitude</td>
-                            <td>Prominent = hypokalemia</td>
+                            <td><i class="fa-solid fa-ellipsis"></i> U wave</td>
+                            <td>Purkinje repolarization</td>
+                            <td>Small</td>
+                            <td>Prominent = Hypokalemia; Inverted = MI</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3 class="clinical-subheader"><i class="fa-solid fa-list-check"></i> Advanced Clinical Interpretations
+                </h3>
+                <table class="clinical-table">
+                    <thead>
+                        <tr>
+                            <th>Condition</th>
+                            <th>ECG Hallmark Features</th>
+                            <th>Priority Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Sinus Bradycardia</strong></td>
+                            <td>HR &lt; 60 bpm; normal morphology</td>
+                            <td>Monitor; treat if symptomatic</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Atrial Fibrillation</strong></td>
+                            <td>No P-waves; irregular R-R intervals</td>
+                            <td>Check hemodynamic stability</td>
+                        </tr>
+                        <tr>
+                            <td><strong>1st Degree AV Block</strong></td>
+                            <td>PR Interval &gt; 200ms (constant)</td>
+                            <td>Routine monitoring</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Hyperkalaemia</strong></td>
+                            <td>Tall/Tented T-waves; flattened P-waves</td>
+                            <td>Emergency biochemical review</td>
+                        </tr>
+                        <tr>
+                            <td><strong>LBBB / RBBB</strong></td>
+                            <td>Widened QRS (&gt; 120ms); notched R-wave</td>
+                            <td>Clinical/Echo correlation</td>
                         </tr>
                     </tbody>
                 </table>
@@ -335,7 +446,7 @@
     <div id="pleth-modal" class="modal hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Plethysmographic Waveform Reference</h2>
+                <h2><i class="fa-solid fa-chart-line"></i> Plethysmographic Waveform Reference</h2>
                 <span class="close-modal" id="close-pleth-modal">&times;</span>
             </div>
             <div class="modal-body">
@@ -402,7 +513,7 @@
     <div id="spo2-modal" class="modal hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>SpO₂ Reference Ranges</h2>
+                <h2><i class="fa-solid fa-lungs"></i> SpO₂ Reference Ranges</h2>
                 <span class="close-modal" id="close-spo2-modal">&times;</span>
             </div>
             <div class="modal-body">
@@ -418,43 +529,47 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td>🟢 Normal</td>
+                            <td><i class="fa-solid fa-circle-check" style="color: #22c55e;"></i> Normal</td>
                             <td>95 – 100%</td>
                             <td>Optimal oxygenation; healthy adults at sea level</td>
                             <td>No intervention required</td>
                         </tr>
                         <tr>
-                            <td>🟡 Acceptable</td>
+                            <td><i class="fa-solid fa-circle-info" style="color: #eab308;"></i> Acceptable</td>
                             <td>92 – 94%</td>
                             <td>Tolerated in lung/heart disease patients</td>
                             <td>Monitor closely; consider supplemental O₂</td>
                         </tr>
                         <tr>
-                            <td>🟠 Mild Hypoxemia</td>
+                            <td><i class="fa-solid fa-circle-exclamation" style="color: #f97316;"></i> Mild Hypoxemia
+                            </td>
                             <td>90 – 91%</td>
                             <td>Below safe threshold for most patients</td>
                             <td>Supplemental oxygen indicated</td>
                         </tr>
                         <tr>
-                            <td>🔴 Moderate Hypoxemia</td>
+                            <td><i class="fa-solid fa-triangle-exclamation" style="color: #ef4444;"></i> Moderate
+                                Hypoxemia</td>
                             <td>85 – 89%</td>
                             <td>Significant hypoxemia; organ stress likely</td>
                             <td>Oxygen therapy required; escalate care</td>
                         </tr>
                         <tr>
-                            <td>⚠️ Severe Hypoxemia</td>
+                            <td><i class="fa-solid fa-skull-crossbones" style="color: #991b1b;"></i> Severe Hypoxemia
+                            </td>
                             <td>&lt; 85%</td>
                             <td>Critical; risk of organ failure</td>
                             <td>Emergency intervention</td>
                         </tr>
                         <tr>
-                            <td>👶 Pediatric (Infants)</td>
+                            <td><i class="fa-solid fa-baby" style="color: #06b6d4;"></i> Pediatric (Infants)</td>
                             <td>≥ 96%</td>
                             <td>Higher threshold for neonates</td>
                             <td>Alert if &lt; 95%</td>
                         </tr>
                         <tr>
-                            <td>🏔️ High Altitude / Smokers</td>
+                            <td><i class="fa-solid fa-mountain" style="color: #64748b;"></i> High Altitude / Smokers
+                            </td>
                             <td>2–5% lower baseline</td>
                             <td>Adjusted norms; compare against patient baseline</td>
                             <td>Use trending, not single value</td>
@@ -469,7 +584,7 @@
     <div id="hr-modal" class="modal hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Heart Rate Reference</h2>
+                <h2><i class="fa-solid fa-heart-pulse"></i> Heart Rate Reference</h2>
                 <span class="close-modal" id="close-hr-modal">&times;</span>
             </div>
             <div class="modal-body">
@@ -484,37 +599,39 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td>🔵 Bradycardia</td>
+                            <td><i class="fa-solid fa-circle-down" style="color: #3b82f6;"></i> Bradycardia</td>
                             <td>&lt; 60 bpm</td>
                             <td>Normal in athletes; symptomatic = investigate</td>
                         </tr>
                         <tr>
-                            <td>🟢 Adults (18+) — Normal</td>
+                            <td><i class="fa-solid fa-circle-check" style="color: #22c55e;"></i> Adults (18+) — Normal
+                            </td>
                             <td>60 – 100 bpm</td>
                             <td>50–90 bpm is optimal fitness range</td>
                         </tr>
                         <tr>
-                            <td>🟡 Tachycardia</td>
+                            <td><i class="fa-solid fa-circle-up" style="color: #eab308;"></i> Tachycardia</td>
                             <td>&gt; 100 bpm at rest</td>
                             <td>Monitor for AFib (irregular RR on ECG)</td>
                         </tr>
                         <tr>
-                            <td>👶 Children (5–12 yrs)</td>
+                            <td><i class="fa-solid fa-child" style="color: #06b6d4;"></i> Children (5–12 yrs)</td>
                             <td>75 – 118 bpm</td>
                             <td>Higher due to metabolic rate</td>
                         </tr>
                         <tr>
-                            <td>🐶 Infants</td>
+                            <td><i class="fa-solid fa-baby" style="color: #06b6d4;"></i> Infants</td>
                             <td>100 – 160 bpm</td>
                             <td>Peaks ~10 weeks gestation</td>
                         </tr>
                         <tr>
-                            <td>🏃 Exercise — Moderate Zone</td>
+                            <td><i class="fa-solid fa-person-running" style="color: #64748b;"></i> Exercise — Moderate
+                                Zone</td>
                             <td>50–70% max HR</td>
                             <td>Max HR = 220 − age (e.g., age 40 = 90–126 bpm)</td>
                         </tr>
                         <tr>
-                            <td>🔥 Exercise — Target Zone</td>
+                            <td><i class="fa-solid fa-fire" style="color: #f97316;"></i> Exercise — Target Zone</td>
                             <td>70–85% max HR</td>
                             <td>e.g., age 40 = 126–153 bpm; cardiovascular benefit</td>
                         </tr>
@@ -528,7 +645,7 @@
     <div id="bp-modal" class="modal hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Blood Pressure Reference (AHA/ACC)</h2>
+                <h2><i class="fa-solid fa-droplet"></i> Blood Pressure Reference (AHA/ACC)</h2>
                 <span class="close-modal" id="close-bp-modal">&times;</span>
             </div>
             <div class="modal-body">
@@ -544,43 +661,45 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td>🔵 Hypotension</td>
+                            <td><i class="fa-solid fa-arrow-trend-down" style="color: #3b82f6;"></i> Hypotension</td>
                             <td>&lt; 90</td>
                             <td>&lt; 60</td>
                             <td>Dizziness, fainting; treat if symptomatic</td>
                         </tr>
                         <tr>
-                            <td>🟢 Normal</td>
+                            <td><i class="fa-solid fa-check-double" style="color: #22c55e;"></i> Normal</td>
                             <td>&lt; 120</td>
                             <td>&lt; 80</td>
                             <td>Optimal health; maintain lifestyle</td>
                         </tr>
                         <tr>
-                            <td>🟡 Elevated</td>
+                            <td><i class="fa-solid fa-arrow-trend-up" style="color: #eab308;"></i> Elevated</td>
                             <td>120 – 129</td>
                             <td>&lt; 80</td>
                             <td>Lifestyle intervention: diet, exercise</td>
                         </tr>
                         <tr>
-                            <td>🟠 Hypertension Stage 1</td>
+                            <td><i class="fa-solid fa-triangle-exclamation" style="color: #f97316;"></i> Hypertension
+                                Stage 1</td>
                             <td>130 – 139</td>
                             <td>80 – 89</td>
                             <td>Medication considered alongside lifestyle changes</td>
                         </tr>
                         <tr>
-                            <td>🔴 Hypertension Stage 2</td>
+                            <td><i class="fa-solid fa-circle-exclamation" style="color: #ef4444;"></i> Hypertension
+                                Stage 2</td>
                             <td>≥ 140</td>
                             <td>≥ 90</td>
                             <td>Medication required; urgent if &gt;180/120</td>
                         </tr>
                         <tr>
-                            <td>👨 Adults 18–39 (avg)</td>
+                            <td><i class="fa-solid fa-user" style="color: #64748b;"></i> Adults 18–39 (avg)</td>
                             <td>Men 119 / Women 110</td>
                             <td>Men 70 / Women 68</td>
                             <td>Gender-based baseline differences</td>
                         </tr>
                         <tr>
-                            <td>👩‍🦳 Adults 60+ (avg)</td>
+                            <td><i class="fa-solid fa-user-tie" style="color: #64748b;"></i> Adults 60+ (avg)</td>
                             <td>133 – 139</td>
                             <td>~69</td>
                             <td>Age-related arterial stiffness; monitor closely</td>
@@ -595,7 +714,7 @@
     <div id="temp-modal" class="modal hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Body Temperature Reference</h2>
+                <h2><i class="fa-solid fa-temperature-half"></i> Body Temperature Reference</h2>
                 <span class="close-modal" id="close-temp-modal">&times;</span>
             </div>
             <div class="modal-body">
@@ -609,27 +728,27 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td>🟢 Normal</td>
+                            <td><i class="fa-solid fa-circle-check" style="color: #22c55e;"></i> Normal</td>
                             <td>36.1 - 37.9</td>
                             <td>Routine monitoring</td>
                         </tr>
                         <tr>
-                            <td>🟡 Low-grade</td>
+                            <td><i class="fa-solid fa-circle-info" style="color: #eab308;"></i> Low-grade</td>
                             <td>38.0 - 39.0</td>
                             <td>Hydration, rest; antipyretics optional</td>
                         </tr>
                         <tr>
-                            <td>🟠 Moderate</td>
+                            <td><i class="fa-solid fa-circle-exclamation" style="color: #f97316;"></i> Moderate</td>
                             <td>39.1 - 40.0</td>
                             <td>Medical review if persistent</td>
                         </tr>
                         <tr>
-                            <td>🔴 High</td>
+                            <td><i class="fa-solid fa-triangle-exclamation" style="color: #ef4444;"></i> High</td>
                             <td>40.1 - 41.0</td>
                             <td>Urgent evaluation, cooling measures</td>
                         </tr>
                         <tr>
-                            <td>🚨 Hyperpyrexia</td>
+                            <td><i class="fa-solid fa-radiation" style="color: #991b1b;"></i> Hyperpyrexia</td>
                             <td>> 41.0</td>
                             <td>Emergency (risk of seizures/organ damage)</td>
                         </tr>
@@ -642,7 +761,6 @@
             </div>
         </div>
     </div>
-
 
     <footer class="app-footer">
         Made with <span class="heart">❤️</span> by

@@ -3,3 +3,4 @@ node_modules/
 npm-debug.log
 .mta_build_tmp/
 mta_archives/
+likes_data.json
