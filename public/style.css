@@ -244,38 +244,45 @@ body {
     box-shadow: 0 4px 6px rgba(10, 132, 255, 0.2);
 }
 
+.details {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+}
+
 .details .name {
     font-family: 'Inter Tight', sans-serif;
-    font-size: 1.15rem;
+    font-size: 1.3rem;
     font-weight: 900;
     color: var(--page-text);
     margin: 0;
     letter-spacing: -0.025em;
-    line-height: 1;
+    line-height: 1.1;
     text-transform: uppercase;
 }
 
 .details .id {
     font-family: 'Inter Tight', sans-serif;
-    font-size: 0.75rem;
+    font-size: 1.05rem;
     font-weight: 800;
     color: var(--page-text-muted);
-    margin-top: 5px;
-    letter-spacing: 0.14em;
+    margin: 0;
+    letter-spacing: 0.05em;
     text-transform: uppercase;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
 }
 
 .id .val {
-    font-family: 'IBM Plex Mono', monospace;
-    font-weight: 700;
+    font-family: 'Inter Tight', sans-serif;
+    font-weight: 900;
     color: var(--page-text);
-    letter-spacing: -0.02em;
+    letter-spacing: -0.01em;
     text-transform: none;
-    font-size: 0.9rem;
-    padding-left: 4px;
+    font-size: 1.05rem;
+    line-height: 1;
 }
 
 .status-panel {
@@ -289,7 +296,7 @@ body {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 4px;
+    gap: 2px;
     border-right: 1.5px solid var(--page-border);
     padding-right: 1.5rem;
 }
@@ -329,25 +336,6 @@ body {
     color: #f87171;
     font-weight: 900;
     text-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
-}
-
-.location {
-    font-family: 'Inter Tight', sans-serif;
-    font-size: 0.70rem;
-    font-weight: 700;
-    color: var(--page-text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-}
-
-.location .room {
-    font-family: 'IBM Plex Mono', monospace;
-    color: var(--page-text);
-    font-weight: 700;
-    letter-spacing: -0.04em;
-    text-transform: none;
-    font-size: 1.4rem;
-    line-height: 1;
 }
 
 .header-nav-btn {

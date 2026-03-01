@@ -1,6 +1,6 @@
-# Health Simulator
+# Health Monitor Simulator
 
-A professional-grade, web-based Medical Vital Signs Simulator designed for clinical training, UI/UX prototyping, and physiological monitoring demonstrations. Now converted to a **Node.js application** with **SAP BTP (Business Technology Platform)** readiness.
+A professional-grade, web-based Medical Vital Signs Simulator designed for clinical training, UI/UX prototyping, and physiological monitoring demonstrations. Now converted to a **Production-Ready Node.js application** with **Render.com** deployment support and persistent visitor analytics.
 
 ## 🏥 Overview
 
@@ -9,100 +9,63 @@ The **Health Simulator** provides a high-fidelity representation of a modern med
 ## ✨ Features
 
 -   **High-Fidelity Waveforms**: Real-time rendering of 12-lead equivalent ECG and Plethysmography (SpO₂) using HTML5 Canvas with procedural generation.
+-   **Persistent Analytics**: Live tracking of visitor count, likes, and dislikes, securely stored using fail-safe JSON file persistence (`likes_data.json`).
 -   **Dynamic Vital Signs**: Realistic simulation of Heart Rate (BPM), Pulse Oximetry (%), and Non-Invasive Blood Pressure (NIBP), including natural physiological drift.
--   **Body Temperature Monitoring**: Advanced thermal monitoring supporting **Celsius (°C)** and **Fahrenheit (°F)** with site-specific offsets (Oral, Rectal, Axillary, Tympanic, Temporal).
--   **Physiological State Logic**: Automatic patient condition assessment (GOOD, UNSTABLE, CRITICAL) based on clinical thresholds for all vitals, including fever classification.
--   **Professional Medical UI**: High-contrast, dark-mode 'Monitor' aesthetic utilizing the **Outfit** and **Inter** font families for premium clinical legibility.
+-   **Professional Medical UI**: High-contrast, dark-mode 'Monitor' aesthetic utilizing the **Inter Tight** and **IBM Plex Mono** font families for premium clinical legibility and alignment.
+-   **Fail-Proof Backend**: Hardened Express.js server that gracefully handles missing files, prevents crashes, and blocks unauthorized access to backend logic (e.g., `server.js`, `package.json`) with strict 403 Forbidden security headers.
 -   **Interactive Controls**: Real-time adjustment of all physiological parameters and measurement sites via a slide-out control panel.
--   **Clinical Reference Modals**: Integrated interactive charts and tables for ECG rhythms, Blood Pressure categories, and Fever Classification protocols.
--   **Cloud-Ready Architecture**: Packaged as a Node.js application with an `mta.yaml` manifest for seamless deployment to SAP BTP.
 
 ## 🛠 Tech Stack & Dependencies
 
-The project is built using a modern Node.js backend for hosting and a "Vanilla Plus" frontend for performance:
+The project is built using a modern Node.js backend for secure hosting and a "Vanilla Plus" frontend for maximum rendering performance:
 
 -   **Backend**: 
     -   **Node.js**: Runtime environment.
-    -   **Express.js**: Lightweight web server for hosting static assets and handling routing.
+    -   **Express.js**: Web server handling dynamic route protection, visitor tracking middleware, and RESTful API endpoints.
 -   **Frontend**:
-    -   **HTML5 & Canvas API**: Waveform rendering and structural foundation.
-    -   **CSS3**: Grid/Flexbox layouts and clinical animations.
-    -   **Vanilla JavaScript (ES6+)**: Core simulation engine and state management.
--   **Cloud Infrastructure**:
-    -   **SAP BTP Cloud Foundry**: Deployment target via `mta.yaml`.
+    -   **HTML5 & Canvas API**: Waveform rendering.
+    -   **CSS3**: High-performance flexbox layouts, CSS variables, and clinical animations.
+    -   **Vanilla JavaScript (ES6+)**: Core simulation engine and asynchronous state synchronization.
+-   **Deployment**:
+    -   **Render.com**: Automated deployment target configured via `render.yaml`.
 
 ## 🚀 Getting Started
 
 ### Local Setup
-1.  Clone the repository.
+1.  Clone the repository:
+    ```bash
+    git clone <your-repo-url>
+    cd "Health Monitor Simulator"
+    ```
 2.  Install dependencies:
     ```bash
     npm install
     ```
-3.  Start the simulator:
+3.  Start the simulator in production mode:
     ```bash
     npm start
     ```
 4.  Open your browser at `http://localhost:3000`.
 
-### SAP BTP Deployment
-This project is configured as a Multi-Target Application (MTA).
-1.  Ensure the **Cloud MTA Build Tool (MBT)** and **CF CLI** are installed.
-2.  Build the project:
-    ```bash
-    mbt build
-    ```
-3.  Deploy to your subaccount:
-    ```bash
-    cf deploy mta_archives/health-monitor_0.0.1.mtar
-    ```
+### Render Deployment
+This project includes a `render.yaml` Blueprint for 1-click deployment.
+1. Push this repository to GitHub/GitLab.
+2. In your Render Dashboard, click **New > Blueprint**.
+3. Connect the repository. Render will automatically provision the Node Web Service, install dependencies, and start the application. 
+*(Note: To keep likes/visitors across re-deploys on Render's free tier, an external database should be used. Render Disks are supported on paid tiers).*
 
 ## 👨‍💻 Developer Guide
 
 ### Project Structure
 -   `/public`: Contains the frontend static assets (`index.html`, `script.js`, `style.css`, `data.json`).
--   `server.js`: The Express.js entry point that initializes the web server.
--   `mta.yaml`: Manifest for SAP BTP, defining the Node.js module and required resources.
--   `package.json`: Manages scripts and dependencies (`express`).
+-   `server.js`: The hardened Express.js entry point containing API routes and security middleware.
+-   `likes_data.json`: Local persistence file (git-ignored) for storing interaction analytics.
+-   `render.yaml`: Standardized declarative environment manifest for Render.com.
 
-### Simulation Logic
--   **State Object**: Centralized source of truth for all simulation variables.
--   **Waveform Engine**: Procedural logic for ECG (P-QRS-T complex) and SpO₂ pulse peaks.
--   **Animation Loop**: High-frequency `requestAnimationFrame` loop handling waveform drawing and natural vitals drift.
-
-## 🛠 Technical Function Reference
-
-The core logic of the simulator is contained within `public/script.js`.
-
-### 🛡 Core Engine & Lifecycle
-- **`loadData()`**: 
-  - *Type*: Async
-  - *Purpose*: Fetches `data.json` to initialize the session. 
-  - *Logic*: Populates patient metadata (Name, ID, Room) via DOM manipulation. It loads the longitudinal `timelineData` array and sets the initial state.
-- **`animate(timestamp)`**: 
-  - *Type*: High-Frequency Loop (`requestAnimationFrame`)
-  - *Purpose*: The engine's cardiac pacemaker.
-  - *Logic*: Handles timeline sequencing, cardiac timing, and horizontal sweep coordinate management.
-- **`resizeCanvases()`**: 
-  - *Type*: Layout Listener
-  - *Purpose*: Event-driven function that recalibrates canvas pixel density to maintain waveform sharpness.
-
-### 🧬 Physiological Modeling (Waveform Synthesis)
-- **`getEcgSignal(t_ms)`**: 
-  - *Model*: Lead II Gaussian Summation. Synthesizes P, QRS, T, and U waves.
-- **`getPlethSignal(phase)`**: 
-  - *Model*: Dicrotic Sine-Exponential Hybrid. Simulates infrared light absorption in tissue.
-
-### 🏥 Clinical Logic & Interaction
-- **`checkAlarms()`**: 
-  - *Type*: Diagnostic Parser. Evaluates vitals against clinical thresholds to update patient status (`GOOD`, `UNSTABLE`, `CRITICAL`).
-- **`updateUIFromState()`**: 
-  - *Type*: Synchronizer. One-way data binding from the internal `state` object to the UI components.
-
-### ⚙️ UI Utilities & Effects
-- **`setActiveView(viewClass, btnId)`**: 
-  - *Engine*: Grid Orchestrator. Toggles CSS layouts for focused monitoring (e.g., dedicated ECG view).
-- **Nurse Call Effect**: Procedurally generates "snowflake" elements to simulate an emergency alert "frost" over the UI.
+### Advanced Core Logic (`public/script.js`)
+-   **`animate(timestamp)`**: High-Frequency `requestAnimationFrame` loop acting as the engine's cardiac pacemaker.
+-   **`updateStatsUI()`**: Robust synchronization loop validating network JSON responses against the backend API to prevent UI lockups during server stress.
+-   **`getEcgSignal(t_ms)`**: Procedural logic for Lead II Gaussian Summation (Synthesizes P, QRS, T, and U waves).
 
 ## 👨‍🎓 Attribution
 
