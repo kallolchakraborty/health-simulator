@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: health-monitor-simulator
+    env: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: PORT
+        value: 3000
+    # To enable true persistence across redeploys, a Render Disk is required.
+    # Disks are not available on the Free tier.
+    # If using a paid tier, uncomment the lines below:
+    # hasApi: true
+    # disk:
+    #   name: data
+    #   mountPath: /opt/render/project/src/data
+    #   sizeGB: 1

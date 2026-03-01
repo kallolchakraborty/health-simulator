@@ -1,6 +1,6 @@
-# Health Simulator
+# Health Monitor Simulator
 
-A professional-grade, web-based Medical Vital Signs Simulator designed for clinical training, UI/UX prototyping, and physiological monitoring demonstrations.
+A professional-grade, web-based Medical Vital Signs Simulator designed for clinical training, UI/UX prototyping, and physiological monitoring demonstrations. Now converted to a **Production-Ready Node.js application** with **Render.com** deployment support and persistent visitor analytics.
 
 ## 🏥 Overview
 
@@ -9,110 +9,67 @@ The **Health Simulator** provides a high-fidelity representation of a modern med
 ## ✨ Features
 
 -   **High-Fidelity Waveforms**: Real-time rendering of 12-lead equivalent ECG and Plethysmography (SpO₂) using HTML5 Canvas with procedural generation.
+-   **Persistent Analytics**: Live tracking of visitor count, likes, and dislikes, securely stored using fail-safe JSON file persistence (`likes_data.json`).
 -   **Dynamic Vital Signs**: Realistic simulation of Heart Rate (BPM), Pulse Oximetry (%), and Non-Invasive Blood Pressure (NIBP), including natural physiological drift.
--   **Body Temperature Monitoring**: Advanced thermal monitoring supporting **Celsius (°C)** and **Fahrenheit (°F)** with site-specific offsets (Oral, Rectal, Axillary, Tympanic, Temporal).
--   **Physiological State Logic**: Automatic patient condition assessment (GOOD, UNSTABLE, CRITICAL) based on clinical thresholds for all vitals, including fever classification.
--   **Professional Medical UI**: High-contrast, dark-mode 'Monitor' aesthetic utilizing the **Outfit** and **Inter** font families for premium clinical legibility.
+-   **Professional Medical UI**: High-contrast, dark-mode 'Monitor' aesthetic utilizing the **Inter Tight** and **IBM Plex Mono** font families for premium clinical legibility and alignment.
+-   **Fail-Proof Backend**: Hardened Express.js server that gracefully handles missing files, prevents crashes, and blocks unauthorized access to backend logic (e.g., `server.js`, `package.json`) with strict 403 Forbidden security headers.
 -   **Interactive Controls**: Real-time adjustment of all physiological parameters and measurement sites via a slide-out control panel.
--   **Clinical Reference Modals**: Integrated interactive charts and tables for ECG rhythms, Blood Pressure categories, and Fever Classification protocols.
 
-##  Tech Stack & Dependencies
+## 🛠 Tech Stack & Dependencies
 
-The project is built using a modern, zero-dependency "Vanilla Plus" approach for maximum performance and portability:
+The project is built using a modern Node.js backend for secure hosting and a "Vanilla Plus" frontend for maximum rendering performance:
 
--   **HTML5**: Semantic structure and Canvas API.
--   **CSS3**: Advanced layouts using Grid and Flexbox, custom animations, and responsive design systems.
--   **Vanilla JavaScript (ES6+)**: Core simulation logic, waveform engine, and state management.
--   **Google Fonts**: 
-    -   `Outfit`: Geometric sans for branding and high-impact headers.
-    -   `Inter`: Precision-engineered sans for clinical data legibility.
-
-*No external libraries or frameworks (like React or jQuery) are required.*
+-   **Backend**: 
+    -   **Node.js**: Runtime environment.
+    -   **Express.js**: Web server handling dynamic route protection, visitor tracking middleware, and RESTful API endpoints.
+-   **Frontend**:
+    -   **HTML5 & Canvas API**: Waveform rendering.
+    -   **CSS3**: High-performance flexbox layouts, CSS variables, and clinical animations.
+    -   **Vanilla JavaScript (ES6+)**: Core simulation engine and asynchronous state synchronization.
+-   **Deployment**:
+    -   **Render.com**: Automated deployment target configured via `render.yaml`.
 
 ## 🚀 Getting Started
 
-1.  Clone the repository or download the source files.
-2.  Open `index.html` in any modern web browser.
-3.  Use the **SETTINGS** button in the top right to open the Control Panel and adjust simulation parameters.
-4.  Click the `ℹ️` icons on each panel to view clinical reference data and guidance.
+### Local Setup
+1.  Clone the repository:
+    ```bash
+    git clone <your-repo-url>
+    cd "Health Monitor Simulator"
+    ```
+2.  Install dependencies:
+    ```bash
+    npm install
+    ```
+3.  Start the simulator in production mode:
+    ```bash
+    npm start
+    ```
+4.  Open your browser at `http://localhost:3000`.
+
+### Render Deployment
+This project includes a `render.yaml` Blueprint for 1-click deployment.
+1. Push this repository to GitHub/GitLab.
+2. In your Render Dashboard, click **New > Blueprint**.
+3. Connect the repository. Render will automatically provision the Node Web Service, install dependencies, and start the application. 
+*(Note: To keep likes/visitors across re-deploys on Render's free tier, an external database should be used. Render Disks are supported on paid tiers).*
 
 ## 👨‍💻 Developer Guide
 
 ### Project Structure
--   `index.html`: Main UI structure and clinical modal definitions.
--   `style.css`: Medical design system, workstation aesthetics, and animations.
--   `script.js`: 
-    -   **State Object**: Centralized source of truth for all simulation variables.
-    -   **Waveform Engine**: Procedural logic for ECG (P-QRS-T complex) and SpO₂ pulse peaks.
-    -   **Animation Loop**: High-frequency `requestAnimationFrame` loop handling waveform drawing and natural vitals drift.
+-   `/public`: Contains the frontend static assets (`index.html`, `script.js`, `style.css`, `data.json`).
+-   `server.js`: The hardened Express.js entry point containing API routes and security middleware.
+-   `likes_data.json`: Local persistence file (git-ignored) for storing interaction analytics.
+-   `render.yaml`: Standardized declarative environment manifest for Render.com.
 
-### How to Scale or Expand
-
-#### 1. Adding New Vital Signs (e.g., Resp Rate, EtCO₂)
--   **HTML**: Add a new `.panel` in the `.dashboard-grid` section of `index.html`.
--   **CSS**: Update the grid template in `style.css` if the layout needs adjustment.
--   **JS**: Add the new parameter to the `state` object and create a drawing or update function.
-
-#### 2. Enhancing Physiological Logic
--   Modify the `checkAlarms` function in `script.js` to implement more complex multi-parameter diagnostic logic (e.g., calculating Shock Index).
-
-#### 3. Customizing the Medical Theme
--   Global design tokens are managed in `style.css`. Update the `.app-container` and `.panel` selectors to change the monitor's visual styling.
-
-## 🛠 Technical Function Reference
-
-The core logic of the simulator is contained within `script.js`. This section provides a detailed technical breakdown of every major functional component.
-
-### 🛡 Core Engine & Lifecycle
-- **`loadData()`**: 
-  - *Type*: Async
-  - *Purpose*: Fetches `data.json` to initialize the session. Populates patient metadata (Name, ID, Room) and loads the longitudinal `timelineData` array which dictates vital sign changes over hours or minutes.
-- **`animate(timestamp)`**: 
-  - *Type*: Animation Loop (`requestAnimationFrame`)
-  - *Purpose*: The heart of the simulation. Synchronized to the display refresh rate (60Hz), it handles:
-    - **Timeline Sequencing**: Mapping elapsed time to specific vital sign targets.
-    - **Physiological Drift**: Injecting natural, beat-driven fluctuations into vitals for realism.
-    - **Waveform Scanning**: Calculating the precise pixel coordinates for the ECG and Pleth sweeps.
-- **`resizeCanvases()`**: 
-  - *Type*: Window Resident
-  - *Purpose*: Calculates the exact width and height of canvas elements based on their parent grid containers. Crucial for maintaining waveform resolution and prevents image stretching during browser resizing.
-
-### 🧬 Physiological Modeling (Waveform Synthesis)
-- **`getEcgSignal(t_ms)`**: 
-  - *Model*: Composite Gaussian Synthesis
-  - *Details*: Calculates the Y-offset for a cardiac cycle at a given millisecond. It adds multiple Gaussian waves to create the P-wave, Q-Complex, R-Peak, S-Complex, and T-wave. Responds dynamically to HR and user-defined PR/QRS intervals.
-- **`getPlethSignal(phase)`**: 
-  - *Model*: Sine-Decay with Dicrotic Notch
-  - *Details*: Represents Infrared absorption in the finger. Uses a rapid sine upstroke for systole and an exponential decay for diastole, with a small Gaussian 'bump' to represent the aortic valve closure (dicrotic notch).
-
-### 🏥 Clinical Logic & State Management
-- **`checkAlarms()`**: 
-  - *Logic*: Threshold Evaluation
-  - *Details*: Continuously evaluates current vitals against clinical safety ranges. It triggers visual alerts (blinking) and updates the patient status (`GOOD`, `UNSTABLE`, `CRITICAL`) based on parameters like SpO₂ < 92% or BP > 140/90.
-- **`updateUIFromState()`**: 
-  - *Role*: Synchronization Layer
-  - *Details*: Standardizes the UI state. When parameters change (via timeline or user slider), this function updates all labels, displays, and control settings throughout the app to maintain data integrity.
-- **`formatTemp(celsius)` / `formatRange(rangeStr)`**: 
-  - *Role*: Unit Conversion Utility
-  - *Details*: Handles mathematical conversion (C ↔ F) and string formatting. Ensures that regardless of the display unit, the underlying clinical logic remains grounded in precise Celsius values.
-
-### 📊 Visualization & Reference Rendering
-- **`draw[Vital]Reference()`**: 
-  - *Category*: Canvas Drawing Suite
-  - *Functions*: `drawReferenceModal` (ECG), `drawHrReference`, `drawBpReference`, etc.
-  - *Details*: Uses Canvas `roundRect`, `stroke`, and `fillText` APIs to render detailed clinical maps. These functions draw categorized medical "danger zones" (e.g., Hypertension stages or Hypoxemia levels) and place a live needle indicating where the patient currently falls on that scale.
-
-### 🧭 Navigation & Interaction
-- **`setActiveView(viewClass, btnId)`**: 
-  - *Logic*: Grid Orchestrator
-  - *Details*: Manages transitions between "Home" dashboard and "Focused" single-vital views. It toggles CSS layout classes and ensures canvases are cleared and waveforms are reset to coordinate `(0, y)` to avoid visual artifacts during transitions.
-- **Accordion & Modal Listeners**: 
-  - *Role*: UI Interaction
-  - *Details*: Standardized listeners that handle the state of slide-out settings and clinical information overlays using CSS classes for hardware-accelerated animations.
+### Advanced Core Logic (`public/script.js`)
+-   **`animate(timestamp)`**: High-Frequency `requestAnimationFrame` loop acting as the engine's cardiac pacemaker.
+-   **`updateStatsUI()`**: Robust synchronization loop validating network JSON responses against the backend API to prevent UI lockups during server stress.
+-   **`getEcgSignal(t_ms)`**: Procedural logic for Lead II Gaussian Summation (Synthesizes P, QRS, T, and U waves).
 
 ## 👨‍🎓 Attribution
 
-Designed and Developed with ❤️ by [Kallol Chakraborty](https://www.linkedin.com/in/kallol-chakraborty-9728a699/).
+Designed and Developed with ❤️ by [Kallol Chakraborty](https://github.com/kallolchakraborty).
 
 ---
 *Disclaimer: This is a simulation tool for educational and design purposes only. It is not intended for actual medical diagnosis or treatment.*

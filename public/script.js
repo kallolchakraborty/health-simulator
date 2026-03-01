@@ -17,12 +17,28 @@ document.addEventListener('DOMContentLoaded', () => {
         tempSite: 'Oral',    // Measurement site designation
         tempUnit: 'C',       // Active unit ('C' or 'F')
         ecgSpeed: 3,         // Waveform sweep speed (pixels per frame)
-        lastFluctuation: 0   // Timestamp of last natural vital drift
+        lastFluctuation: 0,  // Timestamp of last natural vital drift
+        isManualMode: false  // If true, ignore timeline data
+    };
+
+    const siteRanges = {
+        'Oral': '36.1-37.9',
+        'Rectal': '36.6-38.4',
+        'Axillary': '35.6-37.4',
+        'Tympanic': '36.1-37.9',
+        'Temporal': '36.1-37.5'
     };
 
     // --- Timeline Simulation Logic ---
     let timelineData = [];
     let startTime = 0;
+    let lastBeatTime = 0;
+
+    // --- Graph Draw State ---
+    let ecgX = 0;
+    let lastEcgY = 0;
+    let lastPlethY = 0;
+    let noiseOffset = 0;
 
     // DOM Elements
     const hrValue = document.getElementById('hr-value');
@@ -32,8 +48,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Control Panel Elements
     const settingsBtn = document.getElementById('toggle-controls');
+    const settingsModal = document.getElementById('settings-modal');
     const controlsPanel = document.getElementById('controls-panel');
     const closeControlsBtn = document.getElementById('close-controls');
+    const closeControlsTop = document.getElementById('close-controls-top');
 
     const hrControl = document.getElementById('hr-control');
     const sysControl = document.getElementById('sys-control');
@@ -62,34 +80,61 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadData() {
         try {
             const response = await fetch('data.json');
+            if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+
             const data = await response.json();
+            if (!data || !data.patient) throw new Error('Malformed data structure');
 
             // 1. Update Patient Information Header
-            document.querySelector('.name').innerHTML = `${data.patient.lastName.toUpperCase()}, ${data.patient.firstName.toUpperCase()} <span class="gender">(${data.patient.gender})</span>`;
-            document.querySelector('.id').textContent = `Patient ID: ${data.patient.id}`;
-            document.querySelector('.room').textContent = data.patient.room;
+            const nameEl = document.querySelector('.name');
+            const initialsEl = document.getElementById('patient-initials');
+            if (nameEl) {
+                const fName = (data.patient.firstName || 'Unknown').toUpperCase();
+                const lName = (data.patient.lastName || 'Patient').toUpperCase();
+                const gender = data.patient.gender || 'N/A';
+                nameEl.textContent = `${lName}, ${fName} (${gender})`;
+            }
 
-            // 2. Load Simulation Timeline (Sequential vital sign changes over time)
+            if (initialsEl) {
+                const fInitial = (data.patient.firstName || 'P').charAt(0).toUpperCase();
+                const lInitial = (data.patient.lastName || 'X').charAt(0).toUpperCase();
+                initialsEl.textContent = `${fInitial}${lInitial}`;
+            }
+
+            const idValEl = document.querySelector('.id .val');
+            if (idValEl) {
+                idValEl.textContent = data.patient.id || '---';
+            }
+
+            const roomEl = document.querySelector('.room');
+            if (roomEl) {
+                const roomNum = data.patient.room || '000';
+                roomEl.textContent = roomNum.toString().startsWith('Room') ? roomNum : `Room ${roomNum}`;
+            }
+
+            // 2. Load Simulation Timeline
             if (data.simulation && data.simulation.timeline) {
                 timelineData = data.simulation.timeline;
-                console.log(`Loaded ${timelineData.length} timeline points.`);
             }
 
             // 3. Set Initial State
-            const initial = timelineData.length > 0 ? timelineData[0] : (data.simulation.baseVitals || {});
+            const baseVitals = (data.simulation && data.simulation.baseVitals) ? data.simulation.baseVitals : {};
+            const initial = (timelineData && timelineData.length > 0) ? timelineData[0] : baseVitals;
 
-            if (initial.hr) {
-                state.hrTarget = initial.hr;
-                state.spo2Target = initial.spo2;
-                state.sys = initial.sys;
-                state.dia = initial.dia;
+            if (initial && (initial.hr || initial.spo2)) {
+                state.hrTarget = initial.hr || state.hrTarget;
+                state.spo2Target = initial.spo2 || state.spo2Target;
+                state.sys = initial.sys || state.sys;
+                state.dia = initial.dia || state.dia;
 
-                // Sync UI
+                // Sync UI immediately
                 updateUIFromState();
             }
 
         } catch (error) {
-            console.error('Error loading simulation data:', error);
+            console.error('[Fail-Safe] Simulation data load failed:', error.message);
+            // Dashboard stays at defaults defined in the 'state' object
+            updateUIFromState();
         }
     }
 
@@ -158,14 +203,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const ecgParent = ecgCanvas.parentElement;
         const plethParent = plethCanvas.parentElement;
 
-        // Only resize if the parent is actually visible (non-zero dimensions)
-        if (ecgParent.clientWidth > 0 && ecgParent.clientHeight > 0) {
+        if (ecgParent && ecgParent.clientWidth > 0 && ecgParent.clientHeight > 0) {
             ecgCanvas.width = ecgParent.clientWidth;
             ecgCanvas.height = ecgParent.clientHeight;
+            lastEcgY = ecgCanvas.height / 2; // Initialize vertical start to center
         }
-        if (plethParent.clientWidth > 0 && plethParent.clientHeight > 0) {
+        if (plethParent && plethParent.clientWidth > 0 && plethParent.clientHeight > 0) {
             plethCanvas.width = plethParent.clientWidth;
             plethCanvas.height = plethParent.clientHeight;
+            lastPlethY = plethCanvas.height * 0.85; // Initialize vertical start to base
         }
     }
 
@@ -352,7 +398,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.globalAlpha = 1;
 
             // Pill badge — clamped so it never overflows canvas edges
-            ctx.font = 'bold 13px monospace';
+            ctx.font = 'bold 13px Inter';
             const tw = ctx.measureText(label).width + 10;
             const bh = 17;
             const by = above ? waveY - 22 : waveY + 6;
@@ -393,7 +439,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Label pill — clamped to canvas bounds
             const mx = (x1 + x2) / 2;
-            ctx.font = 'bold 11px monospace';
+            ctx.font = 'bold 11px Inter';
             const tw = ctx.measureText(label).width + 8;
             const lbx = Math.max(2, Math.min(W - tw - 2, mx - tw / 2));
             const lcx = lbx + tw / 2;
@@ -496,7 +542,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.stroke();
             ctx.setLineDash([]); ctx.globalAlpha = 1;
 
-            ctx.font = 'bold 12px monospace';
+            ctx.font = 'bold 12px Inter';
             const tw = ctx.measureText(label).width + 10;
             const bh = 16;
             const by = above ? py - 22 : py + 5;
@@ -526,7 +572,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             const mx = (x1 + x2) / 2;
-            ctx.font = 'bold 11px monospace';
+            ctx.font = 'bold 11px Inter';
             const tw = ctx.measureText(label).width + 8;
             const lbx = Math.max(2, Math.min(W - tw - 2, mx - tw / 2));
             const lcx = lbx + tw / 2;
@@ -551,7 +597,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.moveTo(ax, ay); ctx.lineTo(ax - 4, ay + dir * 6); ctx.lineTo(ax + 4, ay + dir * 6); ctx.closePath();
             ctx.fillStyle = '#4ade80'; ctx.fill();
         });
-        ctx.fillStyle = '#4ade80'; ctx.font = 'bold 9px monospace'; ctx.textAlign = 'left';
+        ctx.fillStyle = '#4ade80'; ctx.font = 'bold 9px Inter'; ctx.textAlign = 'left';
         ctx.fillText('AC amp', peakX + 18, (baseline + peakY) / 2 + 4);
         ctx.restore();
 
@@ -628,7 +674,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Tick marks + % labels every 2%
         ctx.fillStyle = 'rgba(255,255,255,0.6)';
-        ctx.font = '10px monospace';
+        ctx.font = '10px Inter';
         ctx.textAlign = 'center';
         for (let v = MIN_SPO2; v <= MAX_SPO2; v += 2) {
             const tx = spToX(v);
@@ -682,7 +728,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Value badge above needle
         const badge = `${currentSpo2}%`;
-        ctx.font = 'bold 13px monospace';
+        ctx.font = 'bold 13px Inter';
         const bw = ctx.measureText(badge).width + 12;
         const bx = Math.max(2, Math.min(W - bw - 2, nx - bw / 2));
         ctx.shadowBlur = 0;
@@ -761,7 +807,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.fillStyle = 'rgba(255,255,255,0.25)';
             ctx.fillRect(tx - 0.5, barTop + barH, 1, 5);
             ctx.fillStyle = 'rgba(255,255,255,0.5)';
-            ctx.font = '9px monospace'; ctx.textAlign = 'center';
+            ctx.font = '9px Inter'; ctx.textAlign = 'center';
             ctx.fillText(v, tx, barTop + barH + 15);
         }
         // "bpm" axis label
@@ -794,7 +840,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.lineWidth = 1.5; ctx.globalAlpha = 0.85;
             ctx.beginPath(); ctx.moveTo(x1, by); ctx.lineTo(x2, by); ctx.stroke();
             [x1, x2].forEach(xp => { ctx.beginPath(); ctx.moveTo(xp, by - 4); ctx.lineTo(xp, by + 4); ctx.stroke(); });
-            ctx.font = 'bold 9px monospace';
+            ctx.font = 'bold 9px Inter';
             const tw = ctx.measureText(ez.label).width + 8;
             const lbx = Math.max(2, Math.min(W - tw - 2, (x1 + x2) / 2 - tw / 2));
             ctx.beginPath(); ctx.roundRect(lbx, by - 14, tw, 12, 3); ctx.fill();
@@ -819,7 +865,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.beginPath(); ctx.moveTo(nx, barTop - 4); ctx.lineTo(nx - 7, barTop - 22); ctx.lineTo(nx + 7, barTop - 22); ctx.closePath(); ctx.fill();
         // Badge
         const badge = `${currentHr} bpm`;
-        ctx.font = 'bold 12px monospace';
+        ctx.font = 'bold 12px Inter';
         const bw = ctx.measureText(badge).width + 12;
         const bx = Math.max(2, Math.min(W - bw - 2, nx - bw / 2));
         ctx.shadowBlur = 0; ctx.fillStyle = '#ffffff';
@@ -912,7 +958,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // ── X-axis ticks + labels (SYS) ──
         ctx.fillStyle = 'rgba(255,255,255,0.5)';
-        ctx.font = '9px monospace'; ctx.textAlign = 'center';
+        ctx.font = '9px Inter'; ctx.textAlign = 'center';
         for (let s = SYS_MIN; s <= SYS_MAX; s += 20) {
             const x = sysToX(s);
             ctx.fillRect(x - 0.5, mt + cH, 1, 4);
@@ -924,7 +970,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // ── Y-axis ticks + labels (DIA) ──
         ctx.fillStyle = 'rgba(255,255,255,0.5)';
-        ctx.font = '9px monospace'; ctx.textAlign = 'right';
+        ctx.font = '9px Inter'; ctx.textAlign = 'right';
         for (let d = DIA_MIN; d <= DIA_MAX; d += 10) {
             const y = diaToY(d);
             ctx.fillRect(ml - 4, y - 0.5, 4, 1);
@@ -963,7 +1009,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Value badge
         const badge = `${currentSys}/${currentDia}`;
-        ctx.font = 'bold 12px monospace';
+        ctx.font = 'bold 12px Inter';
         const bw = ctx.measureText(badge).width + 12;
         const bx = Math.max(ml + 2, Math.min(W - mr - bw - 2, px - bw / 2));
         const by = py - 30;
@@ -979,17 +1025,9 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.fillText('SYS / DIA Classification (AHA/ACC)', ml, mt - 10);
     }
 
-    // --- Main Loop ---
-    let ecgX = 0;
-    let lastEcgY = 0;
-    let lastPlethY = 0;
-    let noiseOffset = 0;
-
     /**
      * Principal Animation & Simulation Loop
      * Synchronized to the display refresh rate (usually 60Hz).
-     * Handles timeline sequencing, natural vitals drift, alarm checking,
-     * and high-fidelity waveform drawing.
      */
     function animate(timestamp) {
         // Start timeline on first frame
@@ -997,7 +1035,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!lastBeatTime) lastBeatTime = timestamp;
 
         // 1. Update Simulation State from Time-based sequences
-        if (timelineData.length > 0) {
+        // 1. Update Targets from Timeline (if enabled)
+        if (timelineData.length > 0 && !state.isManualMode) {
             const elapsedMinutes = (timestamp - startTime) / 60000;
             // Map timeline data to 5-second intervals
             let idx = Math.floor(elapsedMinutes * 12);
@@ -1061,9 +1100,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 3. Coordinate-Based Waveform Rendering
         const speed = state.ecgSpeed;
-        ecgCtx.strokeStyle = '#008f5d'; // Medical Green
-        ecgCtx.lineWidth = 2;
-        plethCtx.strokeStyle = '#e6ac00'; // Medical Amber/Yellow
+        ecgCtx.strokeStyle = '#22c55e'; // Vibrant Medical Green
+        ecgCtx.lineWidth = 3;
+        plethCtx.strokeStyle = '#fbbf24'; // Vibrant Medical Amber
         plethCtx.lineWidth = 3;
 
         const prevX = ecgX;
@@ -1113,13 +1152,42 @@ document.addEventListener('DOMContentLoaded', () => {
     requestAnimationFrame(animate);
 
     // --- UI Controls ---
-    settingsBtn.addEventListener('click', () => {
-        controlsPanel.classList.remove('hidden');
-    });
+    const openSettings = (e) => {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        if (settingsModal) {
+            settingsModal.classList.remove('hidden');
+            console.log("Settings opened");
+        }
+    };
 
-    closeControlsBtn.addEventListener('click', () => {
-        controlsPanel.classList.add('hidden');
-    });
+    const closeSettings = (e) => {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        if (settingsModal) settingsModal.classList.add('hidden');
+    };
+
+    // Re-verify selectors in case of dynamic DOM changes
+    const actualSettingsBtn = document.getElementById('toggle-controls') || document.querySelector('.settings-btn');
+    if (actualSettingsBtn) {
+        actualSettingsBtn.removeEventListener('click', openSettings); // Prevent duplicates
+        actualSettingsBtn.addEventListener('click', openSettings);
+    }
+
+    // Modal Close Buttons
+    if (closeControlsBtn) closeControlsBtn.addEventListener('click', closeSettings);
+    if (closeControlsTop) closeControlsTop.addEventListener('click', closeSettings);
+
+    // Click outside to close (Modal Backdrop)
+    if (settingsModal) {
+        settingsModal.addEventListener('click', (e) => {
+            if (e.target === settingsModal) closeSettings(e);
+        });
+    }
 
     // ECG ℹ️ → open ECG reference modal
     const showInfoBtn = document.getElementById('show-info-btn');
@@ -1313,7 +1381,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- View Switching Logic ---
     const dashboard = document.querySelector('.dashboard-grid');
-    const navBtns = document.querySelectorAll('.nav-btn');
+    const navBtns = document.querySelectorAll('.bottom-nav .nav-btn');
 
     function setActiveView(viewClass, btnId) {
         // Reset Grid
@@ -1345,7 +1413,17 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-bp').addEventListener('click', () => setActiveView('view-bp', 'btn-bp'));
     document.getElementById('btn-records').addEventListener('click', () => setActiveView('view-records', 'btn-records'));
 
+    function triggerManualOverride() {
+        if (!state.isManualMode) {
+            state.isManualMode = true;
+            const modeSelect = document.getElementById('sim-mode');
+            if (modeSelect) modeSelect.value = 'manual';
+            console.log("Manual Override activated via user input.");
+        }
+    }
+
     hrControl.addEventListener('input', (e) => {
+        triggerManualOverride();
         const val = parseInt(e.target.value);
         state.hrTarget = val;
         hrDisplay.innerText = val;
@@ -1354,6 +1432,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     spo2Control.addEventListener('input', (e) => {
+        triggerManualOverride();
         const val = parseInt(e.target.value);
         state.spo2Target = val;
         spo2Display.innerText = val;
@@ -1362,6 +1441,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     sysControl.addEventListener('input', (e) => {
+        triggerManualOverride();
         state.sys = parseInt(e.target.value);
         sysDisplay.innerText = state.sys;
         sysValue.innerText = state.sys;
@@ -1369,6 +1449,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     diaControl.addEventListener('input', (e) => {
+        triggerManualOverride();
         state.dia = parseInt(e.target.value);
         diaDisplay.innerText = state.dia;
         diaValue.innerText = state.dia;
@@ -1412,15 +1493,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Temperature Controls
-    const siteRanges = {
-        'Oral': '36.1-37.9',
-        'Rectal': '36.6-38.4',
-        'Axillary': '35.6-37.4',
-        'Tympanic': '36.1-37.9',
-        'Temporal': '36.1-37.5'
-    };
-
     tempControl?.addEventListener('input', (e) => {
+        triggerManualOverride();
         const val = parseFloat(e.target.value);
         if (state.tempUnit === 'F') {
             state.tempTarget = (val - 32) * 5 / 9;
@@ -1445,16 +1519,123 @@ document.addEventListener('DOMContentLoaded', () => {
         if (tempRangeValue) tempRangeValue.innerText = formatRange(siteRanges[site]);
     });
 
-    // --- Accordion Logic ---
+    // Mode Selector Logic
+    const simModeSelect = document.getElementById('sim-mode');
+    simModeSelect?.addEventListener('change', (e) => {
+        state.isManualMode = (e.target.value === 'manual');
+        if (!state.isManualMode) {
+            // Reset start time so timeline resumes smoothly or restarts
+            startTime = performance.now();
+        }
+    });
+
+    // --- Accordion Logic (Exclusive Behavior) ---
     const accHeaders = document.querySelectorAll('.accordion-header');
     accHeaders.forEach(header => {
         header.addEventListener('click', () => {
-            // Toggle active state
-            header.classList.toggle('active');
+            const isActive = header.classList.contains('active');
 
-            // Toggle panel visibility
-            const panel = header.nextElementSibling;
-            panel.classList.toggle('active');
+            // 1. Close all first
+            accHeaders.forEach(h => {
+                h.classList.remove('active');
+                h.nextElementSibling.classList.remove('active');
+            });
+
+            // 2. If it wasn't active, open it now
+            if (!isActive) {
+                header.classList.add('active');
+                header.nextElementSibling.classList.add('active');
+            }
         });
     });
+
+    // --- Professional Scale Physics ---
+    /**
+     * Calibrates the visual "ruler" background for each clinical parameter.
+     * Calculates the exact percentage spacing for 5-unit (major) and 1-unit (minor) ticks
+     * based on the specific range (min/max) of each control.
+     */
+    function setupClinicalScales() {
+        const controls = document.querySelectorAll('.control-group input[type="range"]');
+        controls.forEach(control => {
+            const min = parseFloat(control.min);
+            const max = parseFloat(control.max);
+            const range = max - min;
+
+            if (range > 0) {
+                // Major ticks every 5 units
+                const majorTickPercent = (5 / range) * 100;
+                // Minor ticks every 1 unit
+                const minorTickPercent = (1 / range) * 100;
+
+                control.style.setProperty('--major-tick', `${majorTickPercent}%`);
+                control.style.setProperty('--minor-tick', `${minorTickPercent}%`);
+            }
+        });
+    }
+
+    // Initialize scales on load
+    setupClinicalScales();
+
+    // --- Social Interactions & Stats Logic ---
+    const likeBtn = document.getElementById('btn-like');
+    const dislikeBtn = document.getElementById('btn-dislike');
+    const likeCountEl = document.getElementById('like-count');
+    const dislikeCountEl = document.getElementById('dislike-count');
+
+    // Fetch initial stats from persistent backend
+    async function updateStatsUI() {
+        try {
+            const response = await fetch('/api/stats');
+            if (response.ok) {
+                const data = await response.json();
+                if (data) {
+                    if (likeCountEl) likeCountEl.textContent = (data.likes || 0).toLocaleString();
+                    if (dislikeCountEl) dislikeCountEl.textContent = (data.dislikes || 0).toLocaleString();
+
+                    // Sync persistent visitor count
+                    const visitorEl = document.getElementById('visitor-count');
+                    if (visitorEl && data.visitorCount !== undefined) {
+                        visitorEl.textContent = data.visitorCount.toLocaleString();
+
+                        // Add minor live jitter for simulation feel
+                        let count = data.visitorCount;
+                        const jitterInterval = setInterval(() => {
+                            if (Math.random() > 0.85) {
+                                count += Math.floor(Math.random() * 2);
+                                visitorEl.textContent = count.toLocaleString();
+                            }
+                        }, 25000);
+                    }
+                }
+            }
+        } catch (err) {
+            console.warn('[Social Sync] Backend persistence unavailable.');
+        }
+    }
+
+    async function handleAction(action) {
+        try {
+            const response = await fetch('/api/stats', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action })
+            });
+            if (response.ok) {
+                const data = await response.json();
+                if (data) {
+                    if (likeCountEl) likeCountEl.textContent = (data.likes || 0).toLocaleString();
+                    if (dislikeCountEl) dislikeCountEl.textContent = (data.dislikes || 0).toLocaleString();
+                }
+            }
+        } catch (err) {
+            console.error('[Social Action] Failed to sync:', err.message);
+        }
+    }
+
+    likeBtn?.addEventListener('click', () => handleAction('like'));
+    dislikeBtn?.addEventListener('click', () => handleAction('dislike'));
+
+    // Initialize stats
+    updateStatsUI();
 });

@@ -1,0 +1,6 @@
+node_modules/
+.DS_Store
+npm-debug.log
+.mta_build_tmp/
+mta_archives/
+likes_data.json

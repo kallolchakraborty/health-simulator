@@ -1,0 +1,22 @@
+{
+    "name": "health-monitor-simulator",
+    "version": "1.0.0",
+    "description": "Professional-grade Medical Vital Signs Simulator",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [
+        "medical",
+        "simulator",
+        "vitals",
+        "healthcare",
+        "ecg"
+    ],
+    "author": "Kallol Chakraborty",
+    "license": "ISC",
+    "dependencies": {
+        "express": "^4.18.2"
+    }
+}
