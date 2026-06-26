@@ -90,8 +90,8 @@ app.use((req, res, next) => {
     next();
 });
 
-// Serve static files from 'public' directory
-app.use(express.static(path.join(__dirname, 'public'), {
+// Serve static files from 'docs' directory (also the GitHub Pages root)
+app.use(express.static(path.join(__dirname, 'docs'), {
     index: false,
     maxAge: '1h', // Basic caching for performance
     dotfiles: 'deny' // Strictly deny any .env or .hidden files
@@ -130,7 +130,7 @@ app.post('/api/stats', (req, res) => {
 
 // Global Fallback: Serve UI for any unknown route
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'), (err) => {
+    res.sendFile(path.join(__dirname, 'docs', 'index.html'), (err) => {
         if (err) res.status(500).send('Critical System Error');
     });
 });
