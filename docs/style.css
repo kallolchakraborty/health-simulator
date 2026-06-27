@@ -1408,9 +1408,7 @@ canvas {
 }
 
 .icu-board-grid .icu-ecg-row { grid-column: 1 / 4; }
-.icu-board-grid .icu-waveform { grid-column: span 1; }
 .icu-board-grid .icu-vitals-row { grid-column: 1 / 4; }
-.icu-board-grid .icu-aline-row { grid-column: 1 / 4; }
 
 .icu-wave-container {
     background: var(--bg-canvas);
