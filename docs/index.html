@@ -1,4 +1,10 @@
 <!DOCTYPE html>
+<!--
+    Health Simulator — ICU Critical Care Training Tool
+    Copyright (c) 2026. All rights reserved.
+    Unauthorized copying, reproduction, distribution, or use of this software
+    without express written permission is prohibited.
+-->
 <html lang="en">
 
 <head>
@@ -6,11 +12,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Health Simulator</title>
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Inter+Tight:wght@700;800;900&family=IBM+Plex+Mono:wght@400;500;600;700&family=Silkscreen:wght@400;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Inter+Tight:wght@700;800;900&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap"
         rel="stylesheet">
-    <link href="https://fonts.cdnfonts.com/css/harabara" rel="stylesheet">
-    <link href="https://fonts.cdnfonts.com/css/visitor-tt1-brk" rel="stylesheet">
-    <link href="https://fonts.cdnfonts.com/css/the-visitor" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <link rel="icon" type="image/png" href="logo.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -21,32 +24,6 @@
         Main Application Container 
         Using a Flex-column layout to handle the sticky header and footer 
     -->
-    <!-- Global Page Header -->
-    <header class="page-header">
-        <div class="header-content">
-            <div class="main-logo">
-                <img src="logo.png" alt="Health Simulator Logo" class="brand-logo">
-                <h1 class="brand-name">HEALTH SIMULATOR</h1>
-            </div>
-            <div class="header-actions">
-                <div class="social-actions">
-                    <button id="btn-like" class="action-btn like">
-                        <i class="fa-solid fa-thumbs-up"></i>
-                        <span id="like-count">0</span>
-                    </button>
-                    <button id="btn-dislike" class="action-btn dislike">
-                        <i class="fa-solid fa-thumbs-down"></i>
-                        <span id="dislike-count">0</span>
-                    </button>
-                </div>
-                <div class="visitor-stats">
-                    <span class="visitor-label">LIVE VISITORS</span>
-                    <span class="visitor-count" id="visitor-count">1,248</span>
-                </div>
-            </div>
-        </div>
-    </header>
-
     <div class="app-container">
         <!-- Header -->
         <header class="top-bar">
@@ -55,37 +32,42 @@
                 <div class="avatar-initials" id="patient-initials">KC</div>
                 <div class="details">
                     <h1 class="name">CHAKRABORTY, KALLOL (Male)</h1>
-                    <p class="id">Patient ID: <span class="val">007</span></p>
+                    <p class="id">Patient ID: <span class="val">007</span> &middot; <span id="patient-meta"></span></p>
                 </div>
             </div>
+            <div class="patient-badges">
+                <span class="badge badge-allergy" id="allergy-badge">NKDA</span>
+                <span class="badge badge-code" id="code-status-badge">FULL CODE</span>
+            </div>
+            <span class="dashboard-clock" id="dashboard-clock">--:--:--</span>
             <div class="status-panel">
                 <div class="status-item">
                     <div class="condition">Condition</div>
                     <span id="patient-status" class="status-good">GOOD</span>
                 </div>
-                <div class="status-item" id="scenario-narrative-item" style="display:none;max-width:280px;">
-                    <div class="condition" style="font-size:0.6rem;">SCENARIO NOTE</div>
-                    <span id="scenario-narrative" style="font-size:0.7rem;color:#fbbf24;font-weight:500;line-height:1.2;"></span>
+                <div class="status-item" id="scenario-narrative-item" style="display:none;max-width:200px;">
+                    <div class="condition">SCENARIO</div>
+                    <span id="scenario-narrative"></span>
                 </div>
                 <div class="status-item">
                     <div class="condition">GCS</div>
-                    <span id="gcs-display" class="status-good" style="font-size:0.7rem;font-weight:500;">15 (E4 V5 M6)</span>
+                    <span id="gcs-display" class="status-good">15 (E4 V5 M6)</span>
                 </div>
                 <div class="status-item">
                     <div class="condition">Pain</div>
-                    <span id="pain-display-value" class="status-good" style="font-size:0.7rem;font-weight:500;">0</span>
+                    <span id="pain-display-value" class="status-good">0</span>
                 </div>
                 <div class="status-item">
                     <div class="condition">MEWS</div>
-                    <span id="mews-score" class="status-good" style="font-size:0.7rem;font-weight:500;">0</span>
+                    <span id="mews-score" class="status-good">0</span>
                 </div>
                 <div class="status-item">
                     <div class="condition">qSOFA</div>
-                    <span id="qsofa-score" class="status-good" style="font-size:0.7rem;font-weight:500;">0</span>
+                    <span id="qsofa-score" class="status-good">0</span>
                 </div>
                 <div class="status-item">
                     <div class="condition">NEWS2</div>
-                    <span id="news2-score" class="status-good" style="font-size:0.7rem;font-weight:500;">0</span>
+                    <span id="news2-score" class="status-good">0</span>
                 </div>
             </div>
             <button class="nav-btn header-nav-btn" id="toggle-controls">
@@ -102,20 +84,22 @@
             <!-- ECG Graph -->
             <div class="panel ecg-panel">
                 <div class="panel-header">
-                    <span>ECG <span id="ecg-lead-label" style="font-weight:400;color:#00d2ff;font-size:0.65rem;letter-spacing:0.1em;margin-left:6px;">LEAD II</span></span>
-                    <div class="teaching-tools-bar">
-                        <button id="btn-freeze" class="teaching-btn" title="Freeze/Unfreeze"><i class="fa-solid fa-pause"></i></button>
-                        <button id="btn-calipers" class="teaching-btn" title="Toggle Calipers"><i class="fa-solid fa-ruler"></i></button>
-                        <button id="btn-labels" class="teaching-btn" title="Toggle Wave Labels"><i class="fa-solid fa-tag"></i></button>
-                        <button id="btn-export" class="teaching-btn" title="Export Strip as PNG"><i class="fa-solid fa-download"></i></button>
-                    </div>
+                    <span>ECG <span id="ecg-lead-label">LEAD II</span></span>
                     <button id="show-info-btn" class="icon-trigger-btn" title="ECG Clinical Reference">
                         <i class="fa-solid fa-circle-info"></i>
                     </button>
                 </div>
-                <div class="canvas-container" style="position:relative;">
+                <div class="teaching-bar">
+                    <button id="btn-freeze" class="teaching-btn" title="Freeze/Unfreeze"><i class="fa-solid fa-pause"></i> Freeze</button>
+                    <button id="btn-calipers" class="teaching-btn" title="Toggle Calipers"><i class="fa-solid fa-ruler"></i> Calipers</button>
+                    <button id="btn-labels" class="teaching-btn" title="Toggle Wave Labels"><i class="fa-solid fa-tag"></i> Labels</button>
+                    <button id="btn-export" class="teaching-btn" title="Export Strip as PNG"><i class="fa-solid fa-download"></i> Export</button>
+                    <div class="teaching-divider"></div>
+                    <button id="btn-quiz-toggle" class="teaching-btn" title="Toggle Quiz Mode"><i class="fa-solid fa-eye-slash"></i> Quiz</button>
+                </div>
+                <div class="canvas-container">
                     <canvas id="ecgCanvas"></canvas>
-                    <div id="caliper-readout" style="position:absolute;bottom:4px;left:8px;color:#fbbf24;font-size:0.65rem;font-weight:700;display:none;background:rgba(0,0,0,0.7);padding:2px 6px;border-radius:4px;"></div>
+                    <div id="caliper-readout"></div>
                 </div>
             </div>
 
@@ -127,11 +111,11 @@
                         <i class="fa-solid fa-circle-info"></i>
                     </button>
                 </div>
-                <canvas class="trend-canvas" id="trend-hr" height="20"></canvas>
                 <div class="metric-display">
                     <span class="value" id="hr-value">105</span>
                     <span class="unit">bpm</span>
                 </div>
+                <canvas class="trend-canvas" id="trend-hr" height="16"></canvas>
             </div>
 
             <!-- Blood Pressure -->
@@ -142,7 +126,6 @@
                         <i class="fa-solid fa-circle-info"></i>
                     </button>
                 </div>
-                <canvas class="trend-canvas" id="trend-bp" height="20"></canvas>
                 <div class="bp-display">
                     <div class="bp-metric">
                         <span class="label">SYS</span>
@@ -155,9 +138,8 @@
                     </div>
                 </div>
                 <div class="bp-unit">mmHg</div>
-                <div style="font-size:0.6rem;color:#64748b;margin-top:2px;letter-spacing:0.1em;">
-                    MAP <span id="bp-map" style="color:#22c55e;font-weight:700;">92</span> mmHg
-                </div>
+                <div class="bp-map">MAP <span id="bp-map">92</span> mmHg</div>
+                <canvas class="trend-canvas" id="trend-bp" height="16"></canvas>
             </div>
 
             <!-- Pleth Graph -->
@@ -171,6 +153,7 @@
                 <div class="canvas-container">
                     <canvas id="plethCanvas"></canvas>
                 </div>
+                <canvas class="trend-canvas" id="trend-rr" height="24"></canvas>
             </div>
 
             <!-- SpO2 -->
@@ -181,11 +164,11 @@
                         <i class="fa-solid fa-circle-info"></i>
                     </button>
                 </div>
-                <canvas class="trend-canvas" id="trend-spo2" height="20"></canvas>
                 <div class="metric-display">
-                    <span class="value warning" id="spo2-value">93</span>
+                    <span class="value" id="spo2-value">93</span>
                     <span class="unit">%</span>
                 </div>
+                <canvas class="trend-canvas" id="trend-spo2" height="16"></canvas>
             </div>
 
             <!-- Body Temperature Panel -->
@@ -196,7 +179,6 @@
                         <i class="fa-solid fa-circle-info"></i>
                     </button>
                 </div>
-                <canvas class="trend-canvas" id="trend-temp" height="20"></canvas>
                 <div class="metric-display">
                     <span class="value" id="temp-value">36.8</span>
                     <span class="unit" id="temp-unit">°C</span>
@@ -205,6 +187,7 @@
                     <span class="site">ORAL</span>
                     <span class="range" id="temp-range">36.1-37.9</span>
                 </div>
+                <canvas class="trend-canvas" id="trend-temp" height="16"></canvas>
             </div>
 
             <!-- Capnography (EtCO₂) Panel -->
@@ -218,6 +201,7 @@
                 <div class="canvas-container">
                     <canvas id="co2Canvas"></canvas>
                 </div>
+                <canvas class="trend-canvas" id="trend-etco2" height="24"></canvas>
             </div>
 
             <!-- Arterial Line Panel -->
@@ -241,15 +225,28 @@
                         <i class="fa-solid fa-gear"></i>
                     </button>
                 </div>
-                <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:4px;padding:4px 0;">
-                    <div style="font-size:0.6rem;color:#64748b;letter-spacing:0.1em;font-weight:700;">MODE</div>
-                    <div style="font-size:0.7rem;color:#22c55e;font-weight:500;" id="vent-mode-display">CMV</div>
-                    <div style="display:flex;gap:12px;margin-top:4px;">
-                        <div style="text-align:center;"><div style="font-size:0.5rem;color:#64748b;">FiO₂</div><div style="font-size:0.65rem;color:#fff;font-weight:500;" id="vent-fio2-display">40%</div></div>
-                        <div style="text-align:center;"><div style="font-size:0.5rem;color:#64748b;">PEEP</div><div style="font-size:0.65rem;color:#fff;font-weight:500;" id="vent-peep-display">5</div></div>
-                        <div style="text-align:center;"><div style="font-size:0.5rem;color:#64748b;">TV</div><div style="font-size:0.65rem;color:#fff;font-weight:500;" id="vent-tv-display">500</div></div>
-                        <div style="text-align:center;"><div style="font-size:0.5rem;color:#64748b;">RR</div><div style="font-size:0.65rem;color:#fff;font-weight:500;" id="vent-rr-display">12</div></div>
+                <div class="vent-summary">
+                    <div class="vent-mode-label">MODE</div>
+                    <div class="vent-mode-value" id="vent-mode-display">CMV</div>
+                    <div class="vent-grid">
+                        <div class="vent-stat"><div class="vent-stat-label">FiO₂</div><div class="vent-stat-value" id="vent-fio2-display">40%</div></div>
+                        <div class="vent-stat"><div class="vent-stat-label">PEEP</div><div class="vent-stat-value" id="vent-peep-display">5</div></div>
+                        <div class="vent-stat"><div class="vent-stat-label">TV</div><div class="vent-stat-value" id="vent-tv-display">500</div></div>
+                        <div class="vent-stat"><div class="vent-stat-label">RR</div><div class="vent-stat-value" id="vent-rr-display">12</div></div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Active Infusions Panel -->
+            <div class="panel infusions-panel" id="infusions-panel" style="display:none;">
+                <div class="panel-header">
+                    <span>INFUSIONS</span>
+                    <button id="btn-open-drugs" class="icon-trigger-btn" title="Open Drug Administration">
+                        <i class="fa-solid fa-syringe"></i>
+                    </button>
+                </div>
+                <div class="infusions-list" id="infusions-list">
+                    <span style="color:var(--text-muted);font-size:0.6rem;">No active infusions</span>
                 </div>
             </div>
         </main>
@@ -273,8 +270,8 @@
                 <span class="label">NIBP</span>
             </button>
             <button class="nav-btn" id="btn-records">
-                <i class="fa-solid fa-temperature-half icon"></i>
-                <span class="label">TEMP</span>
+                <i class="fa-solid fa-table-cells icon"></i>
+                <span class="label">Records</span>
             </button>
             <button class="nav-btn" id="btn-labs">
                 <i class="fa-solid fa-flask icon"></i>
@@ -309,9 +306,9 @@
         Allows real-time modification of simulation state 
     -->
     <div id="settings-modal" class="modal hidden">
-        <div id="controls-panel" class="controls-panel">
-            <div class="panel-header-alt">
-                <h3 class="settings-title"><i class="fa-solid fa-gears"></i> Simulation Settings</h3>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-gears"></i> Simulation Settings</h3>
                 <span id="close-controls-top" class="close-modal">&times;</span>
             </div>
 
@@ -336,16 +333,15 @@
                 </select>
             </div>
 
-            <div class="control-group" style="border-bottom:1px solid var(--page-border);padding-bottom:0.75rem;margin-bottom:0.75rem;">
-                <label style="display:flex;align-items:center;gap:0.5rem;">
+            <div class="control-group quiz-control-group">
+                <label class="quiz-label">
                     <input type="checkbox" id="quiz-mode-toggle"> Quiz Mode (hide rhythm)
                 </label>
-                <button id="btn-reveal-rhythm" class="close-modal-btn" style="margin-top:6px;display:none;background:#22c55e;color:#000;border:none;">Reveal Rhythm</button>
+                <button id="btn-reveal-rhythm" class="reveal-rhythm-btn">Reveal Rhythm</button>
             </div>
 
             <!-- Accordion items scroll area -->
-            <div class="accordion-scroll-area"
-                style="max-height: 45vh; overflow-y: auto; margin-bottom: 20px; padding-right: 12px; margin-right: -12px;">
+            <div class="settings-scroll-area">
                 <!-- Accordion 1: ECG & HR -->
                 <div class="accordion-item">
                     <button class="accordion-header">
@@ -532,14 +528,9 @@
                 </div>
             </div>
 
-            <button id="close-controls" class="close-modal-btn">Close</button>
+            <button id="close-controls" class="close-modal-btn" style="margin-top:8px;">Close</button>
         </div>
     </div>
-
-    <!-- 
-        REFERENCE MODAL SYSTEM
-        Provides clinical context and validation metrics for each vital sign 
-    -->
 
     <!-- ECG Clinical Analysis -->
     <div id="info-modal" class="modal hidden">
@@ -550,7 +541,7 @@
             </div>
             <div class="modal-body">
                 <canvas id="refCanvas" width="600" height="200"></canvas>
-                <table class="clinical-table">
+                <div class="table-scroll"><table class="clinical-table">
                     <thead>
                         <tr>
                             <th>Feature</th>
@@ -603,11 +594,11 @@
                             <td>Prominent = Hypokalemia; Inverted = MI</td>
                         </tr>
                     </tbody>
-                </table>
+                </table></div>
 
                 <h3 class="clinical-subheader"><i class="fa-solid fa-list-check"></i> Advanced Clinical Interpretations
                 </h3>
-                <table class="clinical-table">
+                <div class="table-scroll"><table class="clinical-table">
                     <thead>
                         <tr>
                             <th>Condition</th>
@@ -642,7 +633,7 @@
                             <td>Clinical/Echo correlation</td>
                         </tr>
                     </tbody>
-                </table>
+                </table></div>
             </div>
         </div>
     </div>
@@ -656,7 +647,7 @@
             </div>
             <div class="modal-body">
                 <canvas id="plethRefCanvas" width="600" height="180"></canvas>
-                <table class="clinical-table">
+                <div class="table-scroll"><table class="clinical-table">
                     <thead>
                         <tr>
                             <th>Index / Feature</th>
@@ -709,7 +700,7 @@
                             <td>Rapid decay = low peripheral resistance; slow = high resistance</td>
                         </tr>
                     </tbody>
-                </table>
+                </table></div>
             </div>
         </div>
     </div>
@@ -723,7 +714,7 @@
             </div>
             <div class="modal-body">
                 <canvas id="spo2RefCanvas" width="600" height="180"></canvas>
-                <table class="clinical-table">
+                <div class="table-scroll"><table class="clinical-table">
                     <thead>
                         <tr>
                             <th>Category</th>
@@ -780,7 +771,7 @@
                             <td>Use trending, not single value</td>
                         </tr>
                     </tbody>
-                </table>
+                </table></div>
             </div>
         </div>
     </div>
@@ -794,7 +785,7 @@
             </div>
             <div class="modal-body">
                 <canvas id="hrRefCanvas" width="600" height="180"></canvas>
-                <table class="clinical-table">
+                <div class="table-scroll"><table class="clinical-table">
                     <thead>
                         <tr>
                             <th>Category / Age Group</th>
@@ -841,7 +832,7 @@
                             <td>e.g., age 40 = 126–153 bpm; cardiovascular benefit</td>
                         </tr>
                     </tbody>
-                </table>
+                </table></div>
             </div>
         </div>
     </div>
@@ -855,7 +846,7 @@
             </div>
             <div class="modal-body">
                 <canvas id="bpRefCanvas" width="600" height="280"></canvas>
-                <table class="clinical-table">
+                <div class="table-scroll"><table class="clinical-table">
                     <thead>
                         <tr>
                             <th>Category</th>
@@ -910,7 +901,7 @@
                             <td>Age-related arterial stiffness; monitor closely</td>
                         </tr>
                     </tbody>
-                </table>
+                </table></div>
             </div>
         </div>
     </div>
@@ -923,7 +914,7 @@
                 <span class="close-modal" id="close-temp-modal">&times;</span>
             </div>
             <div class="modal-body">
-                <table class="clinical-table">
+                <div class="table-scroll"><table class="clinical-table">
                     <thead>
                         <tr>
                             <th>Severity</th>
@@ -958,8 +949,8 @@
                             <td>Emergency (risk of seizures/organ damage)</td>
                         </tr>
                     </tbody>
-                </table>
-                <div style="margin-top: 15px; font-size: 0.75rem; color: #94a3b8; line-height: 1.4;">
+                </table></div>
+                <div class="temp-note">
                     <p><strong>Note:</strong> Oral is standard reference; adjust rectal +0.5°C, axillary -0.5°C.</p>
                     <p><strong>Dashboard Alert:</strong> Triggered at ≥38°C with symptom correlation.</p>
                 </div>
@@ -975,7 +966,7 @@
                 <span class="close-modal" id="close-co2-modal">&times;</span>
             </div>
             <div class="modal-body">
-                <table class="clinical-table">
+                <div class="table-scroll"><table class="clinical-table">
                     <thead>
                         <tr><th>Phase</th><th>Description</th><th>Normal Value</th><th>Clinical Notes</th></tr>
                     </thead>
@@ -985,9 +976,9 @@
                         <tr><td><strong>Phase III</strong></td><td>Alveolar plateau</td><td>End-tidal CO₂ 35-45 mmHg</td><td>EtCO₂ reflects cardiac output; rising = hypoventilation, falling = PE/hypovolemia</td></tr>
                         <tr><td><strong>Phase IV</strong></td><td>Inspiratory downstroke</td><td>Rapid fall to 0</td><td>Delayed = expiratory obstruction or leak</td></tr>
                     </tbody>
-                </table>
+                </table></div>
                 <h3 class="clinical-subheader">EtCO₂ Interpretation</h3>
-                <table class="clinical-table">
+                <div class="table-scroll"><table class="clinical-table">
                     <thead><tr><th>Pattern</th><th>Cause</th><th>Action</th></tr></thead>
                     <tbody>
                         <tr><td>Sudden drop to 0</td><td>Esophageal intubation / apnea</td><td>Immediate reassessment</td></tr>
@@ -995,7 +986,7 @@
                         <tr><td>Rising EtCO₂</td><td>Hypoventilation, fever, MH</td><td>Increase minute ventilation</td></tr>
                         <tr><td>Shark-fin waveform</td><td>Bronchospasm (asthma/COPD)</td><td>Bronchodilator therapy</td></tr>
                     </tbody>
-                </table>
+                </table></div>
             </div>
         </div>
     </div>
@@ -1008,7 +999,7 @@
                 <span class="close-modal" id="close-aline-modal">&times;</span>
             </div>
             <div class="modal-body">
-                <table class="clinical-table">
+                <div class="table-scroll"><table class="clinical-table">
                     <thead><tr><th>Feature</th><th>Description</th><th>Normal</th><th>Clinical Notes</th></tr></thead>
                     <tbody>
                         <tr><td>Systolic upstroke</td><td>Rapid rise from dicrotic notch to peak</td><td>Steep slope</td><td>Blunted = ↓ contractility, aortic stenosis</td></tr>
@@ -1017,55 +1008,55 @@
                         <tr><td>MAP</td><td>Mean arterial pressure = DIA × ⅔ + SYS × ⅓</td><td>70-105 mmHg</td><td>Target ≥65 mmHg in shock; ↓ MAP = ↓ organ perfusion</td></tr>
                         <tr><td>Pulse Pressure (PP)</td><td>SYS - DIA</td><td>30-50 mmHg</td><td>Narrow = ↓ SV, tamponade; wide = sepsis, aortic regurgitation</td></tr>
                     </tbody>
-                </table>
+                </table></div>
                 <h3 class="clinical-subheader">Waveform Artifacts</h3>
-                <table class="clinical-table">
+                <div class="table-scroll"><table class="clinical-table">
                     <thead><tr><th>Artifact</th><th>Appearance</th><th>Cause</th><th>Fix</th></tr></thead>
                     <tbody>
                         <tr><td>Overdamped</td><td>Blunted upstroke, no dicrotic notch</td><td>Air bubbles, clot, kink</td><td>Flush and aspirate system</td></tr>
                         <tr><td>Underdamped</td><td>Exaggerated peaks, multiple oscillations</td><td>Long tubing, resonance</td><td>Use damping device or shorter tubing</td></tr>
                     </tbody>
-                </table>
+                </table></div>
             </div>
         </div>
     </div>
 
     <!-- Alarm Modal -->
     <div id="alarm-modal" class="modal hidden">
-        <div class="controls-panel" style="max-width:500px;">
-            <div class="panel-header-alt">
-                <h3 class="settings-title"><i class="fa-solid fa-triangle-exclamation"></i> Alarm History</h3>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-triangle-exclamation"></i> Alarm History</h3>
                 <span id="close-alarm-modal" class="close-modal">&times;</span>
             </div>
-            <div style="display:flex;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap;">
-                <button id="alarm-silence-btn" class="close-modal-btn" style="flex:1;background:#3b82f6;color:#fff;border:none;">Silence (2m)</button>
-                <button id="alarm-suspend-btn" class="close-modal-btn" style="flex:1;background:#f59e0b;color:#fff;border:none;">Suspend (30m)</button>
+            <div class="alarm-action-bar">
+                <button id="alarm-silence-btn" class="alarm-action-btn silence">Silence (2m)</button>
+                <button id="alarm-suspend-btn" class="alarm-action-btn suspend">Suspend (30m)</button>
             </div>
-            <div id="alarm-log" style="max-height:300px;overflow-y:auto;font-size:0.75rem;">
-                <div style="color:var(--page-text-muted);text-align:center;padding:1rem;">No alarms recorded</div>
+            <div id="alarm-log">
+                <div class="alarm-log-empty">No alarms recorded</div>
             </div>
         </div>
     </div>
 
     <!-- Trend Modal -->
     <div id="trend-modal" class="modal hidden">
-        <div class="controls-panel" style="max-width:700px;">
-            <div class="panel-header-alt">
-                <h3 class="settings-title"><i class="fa-solid fa-chart-line"></i> Vital Trend</h3>
+        <div class="modal-content modal-content-wide">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-chart-line"></i> Vital Trend</h3>
                 <span id="close-trend-modal" class="close-modal">&times;</span>
             </div>
-            <canvas id="trend-full-canvas" style="width:100%;border-radius:8px;"></canvas>
+            <canvas id="trend-full-canvas" class="trend-full-canvas"></canvas>
         </div>
     </div>
 
     <!-- Lab Values Modal -->
     <div id="lab-modal" class="modal hidden">
-        <div id="lab-panel" class="controls-panel" style="max-width:550px;">
-            <div class="panel-header-alt">
-                <h3 class="settings-title"><i class="fa-solid fa-flask"></i> Lab Values</h3>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-flask"></i> Lab Values</h3>
                 <span id="close-lab-modal" class="close-modal">&times;</span>
             </div>
-            <div style="max-height:50vh;overflow-y:auto;padding-right:8px;">
+            <div class="lab-scroll-area">
                 <div class="control-group"><label class="lab-cat">ABG</label></div>
                 <div class="control-group"><label>pH (7.35-7.45): <span id="lab-ph">7.40</span></label><input type="range" id="lab-ph-ctrl" min="6.8" max="7.8" step="0.01" value="7.40"></div>
                 <div class="control-group"><label>pCO₂ (35-45): <span id="lab-pco2">40</span></label><input type="range" id="lab-pco2-ctrl" min="15" max="80" value="40"></div>
@@ -1074,33 +1065,34 @@
                 <div class="control-group"><label>BE (-2 to +2): <span id="lab-be">0</span></label><input type="range" id="lab-be-ctrl" min="-15" max="15" value="0"></div>
                 <div class="control-group"><label>Lactate (0.5-2.0): <span id="lab-lactate">1.0</span></label><input type="range" id="lab-lactate-ctrl" min="0.5" max="15" step="0.1" value="1.0"></div>
 
-                <div class="control-group" style="border-top:1px solid var(--page-border);padding-top:8px;margin-top:4px;"><label class="lab-cat">Electrolytes</label></div>
+                <div class="lab-section-border"><label class="lab-cat">Electrolytes</label></div>
                 <div class="control-group"><label>Na⁺ (135-145): <span id="lab-sodium">140</span></label><input type="range" id="lab-sodium-ctrl" min="110" max="170" value="140"></div>
                 <div class="control-group"><label>K⁺ (3.5-5.0): <span id="lab-potassium">4.2</span></label><input type="range" id="lab-potassium-ctrl" min="2.0" max="8.0" step="0.1" value="4.2"></div>
                 <div class="control-group"><label>Ca²⁺ (2.1-2.6): <span id="lab-calcium">2.2</span></label><input type="range" id="lab-calcium-ctrl" min="1.5" max="3.5" step="0.01" value="2.2"></div>
                 <div class="control-group"><label>Mg²⁺ (0.7-1.1): <span id="lab-magnesium">0.85</span></label><input type="range" id="lab-magnesium-ctrl" min="0.3" max="2.0" step="0.01" value="0.85"></div>
 
-                <div class="control-group" style="border-top:1px solid var(--page-border);padding-top:8px;margin-top:4px;"><label class="lab-cat">Renal</label></div>
+                <div class="lab-section-border"><label class="lab-cat">Renal</label></div>
                 <div class="control-group"><label>Creatinine (0.6-1.2): <span id="lab-creatinine">0.9</span></label><input type="range" id="lab-creatinine-ctrl" min="0.3" max="10" step="0.1" value="0.9"></div>
                 <div class="control-group"><label>BUN (7-20): <span id="lab-bun">14</span></label><input type="range" id="lab-bun-ctrl" min="3" max="100" value="14"></div>
 
-                <div class="control-group" style="border-top:1px solid var(--page-border);padding-top:8px;margin-top:4px;"><label class="lab-cat">Hematology</label></div>
+                <div class="lab-section-border"><label class="lab-cat">Hematology</label></div>
                 <div class="control-group"><label>Hb (12-16): <span id="lab-hemoglobin">14.0</span></label><input type="range" id="lab-hemoglobin-ctrl" min="5" max="20" step="0.1" value="14.0"></div>
                 <div class="control-group"><label>WBC (4-11): <span id="lab-wbc">7.5</span></label><input type="range" id="lab-wbc-ctrl" min="0.5" max="40" step="0.1" value="7.5"></div>
                 <div class="control-group"><label>Platelets (150-400): <span id="lab-platelets">250</span></label><input type="range" id="lab-platelets-ctrl" min="10" max="800" value="250"></div>
 
-                <div class="control-group" style="border-top:1px solid var(--page-border);padding-top:8px;margin-top:4px;"><label class="lab-cat">Cardiac</label></div>
+                <div class="lab-section-border"><label class="lab-cat">Cardiac</label></div>
                 <div class="control-group"><label>Troponin (&lt;0.04): <span id="lab-troponin">0.01</span></label><input type="range" id="lab-troponin-ctrl" min="0" max="50" step="0.01" value="0.01"></div>
                 <div class="control-group"><label>NT-proBNP (&lt;125): <span id="lab-ntprobnp">100</span></label><input type="range" id="lab-ntprobnp-ctrl" min="0" max="5000" value="100"></div>
             </div>
+            <div class="abg-interp" id="abg-interp"></div>
         </div>
     </div>
 
     <!-- Drug Administration Modal -->
     <div id="drug-modal" class="modal hidden">
-        <div id="drug-panel" class="controls-panel" style="max-width:450px;">
-            <div class="panel-header-alt">
-                <h3 class="settings-title"><i class="fa-solid fa-syringe"></i> Drug Administration</h3>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-syringe"></i> Drug Administration</h3>
                 <span id="close-drug-modal" class="close-modal">&times;</span>
             </div>
             <div class="control-group">
@@ -1108,10 +1100,19 @@
                 <select id="drug-select" class="medical-select">
                     <option value="epinephrine">Epinephrine</option>
                     <option value="norepinephrine">Norepinephrine</option>
+                    <option value="vasopressin">Vasopressin</option>
+                    <option value="dobutamine">Dobutamine</option>
+                    <option value="propofol">Propofol</option>
+                    <option value="fentanyl">Fentanyl</option>
+                    <option value="midazolam">Midazolam</option>
                     <option value="metoprolol">Metoprolol</option>
                     <option value="furosemide">Furosemide</option>
                     <option value="amiodarone">Amiodarone</option>
                     <option value="morphine">Morphine</option>
+                    <option value="heparin">Heparin</option>
+                    <option value="insulin">Insulin (Regular)</option>
+                    <option value="kcl">Potassium (KCl)</option>
+                    <option value="bicarb">Sodium Bicarbonate</option>
                 </select>
             </div>
             <div class="control-group">
@@ -1122,20 +1123,21 @@
                     <option value="2">High</option>
                 </select>
             </div>
-            <div style="font-size:0.7rem;color:var(--page-text-muted);margin-bottom:0.75rem;padding:0.5rem;background:rgba(255,255,255,0.05);border-radius:6px;" id="drug-description"></div>
-            <button id="btn-administer-drug" class="close-modal-btn" style="background:#22c55e;color:#000;border:none;width:100%;">Administer</button>
-            <div style="margin-top:1rem;border-top:1px solid var(--page-border);padding-top:0.75rem;">
-                <label style="font-size:0.7rem;font-weight:700;color:#fbbf24;">Active Drugs</label>
-                <div id="active-drugs-list" style="font-size:0.7rem;margin-top:4px;color:var(--page-text-muted);">None</div>
+            <div class="drug-description" id="drug-description"></div>
+            <div class="drug-warning" id="drug-warning" style="display:none;"></div>
+            <button id="btn-administer-drug" class="drug-admin-btn">Administer</button>
+            <div class="active-drugs-section">
+                <label class="active-drugs-label">Active Drugs</label>
+                <div id="active-drugs-list" class="active-drugs-list">None</div>
             </div>
         </div>
     </div>
 
     <!-- Ventilator Settings Modal -->
     <div id="vent-modal" class="modal hidden">
-        <div class="controls-panel" style="max-width:450px;">
-            <div class="panel-header-alt">
-                <h3 class="settings-title"><i class="fa-solid fa-fan"></i> Ventilator Settings</h3>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-fan"></i> Ventilator Settings</h3>
                 <span id="close-vent-modal" class="close-modal">&times;</span>
             </div>
             <div class="control-group">
@@ -1169,28 +1171,29 @@
 
     <!-- ICU Board Modal -->
     <div id="icuboard-modal" class="modal hidden">
-        <div class="controls-panel" style="max-width:95vw;max-height:95vh;width:1200px;">
-            <div class="panel-header-alt">
-                <h3 class="settings-title"><i class="fa-solid fa-display"></i> ICU Monitoring Board</h3>
+        <div class="modal-content modal-content-wide">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-display"></i> ICU Monitoring Board</h3>
                 <span id="close-icuboard-modal" class="close-modal">&times;</span>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto auto;gap:8px;padding:8px;flex:1;min-height:0;">
-                <!-- ECG -->
-                <div style="grid-column:1/3;background:#1e293b;border-radius:8px;padding:4px;position:relative;">
-                    <div style="font-size:0.5rem;color:#64748b;padding:2px 6px;font-weight:700;letter-spacing:0.1em;">ECG LEAD II</div>
-                    <canvas id="icu-ecg-canvas" style="width:100%;height:80px;display:block;"></canvas>
+            <div class="icu-board-grid">
+                <div class="icu-wave-container icu-ecg-row">
+                    <div class="icu-wave-label">ECG LEAD II</div>
+                    <canvas id="icu-ecg-canvas" class="icu-ecg-canvas"></canvas>
                 </div>
-                <!-- Pleth + CO2 -->
-                <div style="background:#1e293b;border-radius:8px;padding:4px;">
-                    <div style="font-size:0.5rem;color:#64748b;padding:2px 6px;font-weight:700;letter-spacing:0.1em;">PLETH</div>
-                    <canvas id="icu-pleth-canvas" style="width:100%;height:60px;display:block;"></canvas>
+                <div class="icu-wave-container">
+                    <div class="icu-wave-label">PLETH</div>
+                    <canvas id="icu-pleth-canvas" class="icu-wave-canvas"></canvas>
                 </div>
-                <div style="background:#1e293b;border-radius:8px;padding:4px;">
-                    <div style="font-size:0.5rem;color:#64748b;padding:2px 6px;font-weight:700;letter-spacing:0.1em;">CO₂</div>
-                    <canvas id="icu-co2-canvas" style="width:100%;height:60px;display:block;"></canvas>
+                <div class="icu-wave-container">
+                    <div class="icu-wave-label">CO₂</div>
+                    <canvas id="icu-co2-canvas" class="icu-wave-canvas"></canvas>
                 </div>
-                <!-- Vitals row -->
-                <div style="grid-column:1/3;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+                <div class="icu-wave-container">
+                    <div class="icu-wave-label">ART LINE</div>
+                    <canvas id="icu-aline-canvas" class="icu-wave-canvas"></canvas>
+                </div>
+                <div class="icu-vitals-row">
                     <div class="icu-vital"><span class="icu-label">HR</span><span class="icu-value" id="icu-hr">72</span><span class="icu-unit">bpm</span></div>
                     <div class="icu-vital"><span class="icu-label">SYS/DIA</span><span class="icu-value" id="icu-bp">120/78</span><span class="icu-unit">mmHg</span></div>
                     <div class="icu-vital"><span class="icu-label">MAP</span><span class="icu-value" id="icu-map">92</span><span class="icu-unit">mmHg</span></div>
@@ -1199,19 +1202,15 @@
                     <div class="icu-vital"><span class="icu-label">RR</span><span class="icu-value" id="icu-rr">16</span><span class="icu-unit">/min</span></div>
                     <div class="icu-vital"><span class="icu-label">TEMP</span><span class="icu-value" id="icu-temp">36.8</span><span class="icu-unit">°C</span></div>
                 </div>
-                <!-- A-line -->
-                <div style="grid-column:1/3;background:#1e293b;border-radius:8px;padding:4px;">
-                    <div style="font-size:0.5rem;color:#64748b;padding:2px 6px;font-weight:700;letter-spacing:0.1em;">ARTERIAL LINE</div>
-                    <canvas id="icu-aline-canvas" style="width:100%;height:60px;display:block;"></canvas>
+            </div>
+            <div class="event-log" id="event-log">
+                <div class="event-log-header">Scenario Event Log</div>
+                <div class="event-log-list" id="event-log-list">
+                    <span style="color:var(--text-muted);font-size:0.6rem;">No events recorded</span>
                 </div>
             </div>
         </div>
     </div>
-
-    <footer class="app-footer">
-        Made with <span class="heart">❤️</span> by
-        <a href="https://github.com/kallolchakraborty" target="_blank" rel="noopener noreferrer">Kallol Chakraborty</a>
-    </footer>
 
     <script src="script.js"></script>
 </body>

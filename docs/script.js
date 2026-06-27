@@ -1,3 +1,10 @@
+/**
+ * Health Simulator — ICU Critical Care Training Tool
+ * Copyright (c) 2026. All rights reserved.
+ * Unauthorized copying, reproduction, distribution, or use of this software
+ * without express written permission is prohibited.
+ */
+
 document.addEventListener('DOMContentLoaded', () => {
     /**
      * Simulation State Engine
@@ -45,6 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
         activeScenario: null, // Currently running scenario
         vitalHistory: [],     // Trend data: [{ time, hr, spo2, sys, dia, rr, temp, gcs, pain }]
         alarmHistory: [],     // { time, level, vital, value, threshold, msg }
+        scenarioEvents: [],   // { time, icon, text }
         alarmLevel: 'none',   // 'none' | 'advisory' | 'warning' | 'crisis'
         alarmSilencedUntil: 0, // timestamp until alarm silence
         alarmSuspendedUntil: 0, // timestamp until alarm suspension
@@ -112,18 +120,56 @@ document.addEventListener('DOMContentLoaded', () => {
             name: 'Epinephrine', onset: 90, duration: 600,
             effects: { hr: 25, sys: 30, dia: 15 },
             sideEffects: { arrhythmiaRisk: 0.3 },
+            interactions: { norepinephrine: 'synergisticPressor', dobutamine: 'increasedArrhythmia' },
             description: 'HR ↑↑, BP ↑↑, 1-2 min onset'
         },
         norepinephrine: {
             name: 'Norepinephrine', onset: 30, duration: 300,
             effects: { hr: 5, sys: 35, dia: 20 },
             sideEffects: {},
+            interactions: { epinephrine: 'synergisticPressor', vasopressin: 'synergisticPressor' },
             description: 'BP ↑↑ (SVR), minimal HR change'
+        },
+        vasopressin: {
+            name: 'Vasopressin', onset: 60, duration: 600,
+            effects: { hr: -5, sys: 25, dia: 15 },
+            sideEffects: { arrhythmiaRisk: 0.1 },
+            interactions: { norepinephrine: 'synergisticPressor' },
+            description: 'BP ↑, non-adrenergic pressor, 0.03 U/min'
+        },
+        dobutamine: {
+            name: 'Dobutamine', onset: 120, duration: 300,
+            effects: { hr: 20, sys: 10, dia: -5 },
+            sideEffects: { arrhythmiaRisk: 0.35 },
+            interactions: { epinephrine: 'increasedArrhythmia', metoprolol: 'antagonistic' },
+            description: 'Inotrope, HR ↑, contractility ↑, β1-agonist'
+        },
+        propofol: {
+            name: 'Propofol', onset: 30, duration: 300,
+            effects: { hr: -5, sys: -20, dia: -15, rr: -6 },
+            sideEffects: { respDepression: 0.7, hypotensionRisk: 0.5 },
+            interactions: { fentanyl: 'synergisticRespDepression', midazolam: 'synergisticRespDepression' },
+            description: 'Sedative, BP ↓↓, RR ↓, rapid onset'
+        },
+        fentanyl: {
+            name: 'Fentanyl', onset: 60, duration: 1800,
+            effects: { hr: -3, sys: -5, dia: -3, pain: -5, rr: -5 },
+            sideEffects: { respDepression: 0.6 },
+            interactions: { propofol: 'synergisticRespDepression', midazolam: 'synergisticRespDepression' },
+            description: 'Potent opioid, pain ↓↓, hemodynamically stable'
+        },
+        midazolam: {
+            name: 'Midazolam', onset: 90, duration: 1200,
+            effects: { hr: 3, sys: -8, dia: -5, rr: -3 },
+            sideEffects: { respDepression: 0.3 },
+            interactions: { propofol: 'synergisticRespDepression', fentanyl: 'synergisticRespDepression' },
+            description: 'Benzodiazepine, sedation, anxiolysis'
         },
         metoprolol: {
             name: 'Metoprolol', onset: 300, duration: 21600,
             effects: { hr: -20, sys: -12, dia: -8 },
             sideEffects: { bradycardiaRisk: 0.2 },
+            interactions: { dobutamine: 'antagonistic', epinephrine: 'antagonistic' },
             description: 'HR ↓, BP ↓, β-blockade'
         },
         furosemide: {
@@ -136,6 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
             name: 'Amiodarone', onset: 600, duration: 43200,
             effects: { hr: -10, sys: -5, dia: -5 },
             sideEffects: { bradycardiaRisk: 0.4 },
+            interactions: { epinephrine: 'increasedArrhythmia' },
             description: 'Antiarrhythmic, rhythm control'
         },
         morphine: {
@@ -143,15 +190,40 @@ document.addEventListener('DOMContentLoaded', () => {
             effects: { hr: -5, sys: -8, dia: -5, pain: -4, rr: -4 },
             sideEffects: { respDepression: 0.5 },
             description: 'Pain ↓, RR ↓, vasodilation'
+        },
+        heparin: {
+            name: 'Heparin', onset: 300, duration: 3600,
+            effects: {},
+            sideEffects: {},
+            description: 'Anticoagulant, monitor PTT. No direct vital effect.'
+        },
+        insulin: {
+            name: 'Insulin (Regular)', onset: 900, duration: 14400,
+            effects: { hr: 5, sys: 0, dia: 0 },
+            sideEffects: {},
+            description: 'Lowers glucose, monitor Q1h. No direct vital effect.'
+        },
+        kcl: {
+            name: 'Potassium (KCl)', onset: 600, duration: 7200,
+            effects: {},
+            sideEffects: {},
+            description: 'K⁺ replacement, max 10 mEq/h peripheral. Monitor ECG.'
+        },
+        bicarb: {
+            name: 'Sodium Bicarbonate', onset: 120, duration: 1800,
+            effects: {},
+            sideEffects: {},
+            description: 'Buffer for metabolic acidosis, 1 mEq/kg. No direct vital effect.'
         }
     };
 
-    function getDrugEffect(drugKey, elapsed) {
+    function getDrugEffect(drugKey, elapsed, dose = '1') {
         const drug = DRUG_LIB[drugKey];
         if (!drug) return {};
+        const doseMultiplier = dose === '0.5' ? 0.5 : dose === '2' ? 2.0 : 1.0;
         let multiplier = 0;
         if (elapsed < drug.onset) {
-            multiplier = elapsed / drug.onset; // linear ramp up
+            multiplier = (elapsed / drug.onset); // linear ramp up
         } else if (elapsed < drug.duration) {
             multiplier = 1; // plateau
         } else {
@@ -160,7 +232,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const result = {};
         for (const [key, val] of Object.entries(drug.effects)) {
-            result[key] = val * multiplier;
+            result[key] = val * multiplier * doseMultiplier;
         }
         return result;
     }
@@ -170,7 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const totals = { hr: 0, sys: 0, dia: 0, rr: 0, pain: 0, spo2: 0 };
         state.activeDrugs = state.activeDrugs.filter(ad => {
             const elapsed = (now - ad.timeAdministered) / 1000;
-            const effect = getDrugEffect(ad.drugKey, elapsed);
+            const effect = getDrugEffect(ad.drugKey, elapsed, ad.dose);
             // Remove if fully decayed
             const drug = DRUG_LIB[ad.drugKey];
             if (drug && elapsed > drug.duration * 2) return false;
@@ -384,14 +456,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (mewsEl) {
             mewsEl.textContent = mews;
             mewsEl.style.color = colorForScore(mews, 3, 5);
+            mewsEl.title = `MEWS Breakdown:\nHR: ${hr} → ${Math.min(3, Math.abs(hr - 75) > 30 ? 3 : Math.abs(hr - 75) > 15 ? 2 : Math.abs(hr - 75) > 5 ? 1 : 0)}\nRR: ${rr} → ${rr < 9 || rr > 24 ? 3 : rr < 12 || rr > 20 ? 2 : rr < 15 || rr > 18 ? 1 : 0}\nSYS BP: ${sysBP} → ${sysBP < 71 || sysBP > 199 ? 3 : sysBP < 81 || sysBP > 159 ? 2 : sysBP < 101 ? 1 : 0}\nTemp: ${temp}°C → ${temp < 35 || temp > 38.4 ? 2 : temp < 36 || temp > 38 ? 1 : 0}\nGCS: ${gcs} → ${gcs < 9 ? 3 : gcs < 13 ? 2 : gcs < 15 ? 1 : 0}`;
         }
         if (qsofaEl) {
             qsofaEl.textContent = qsofa;
             qsofaEl.style.color = colorForScore(qsofa, 1, 2);
+            qsofaEl.title = `qSOFA Breakdown:\nRR ≥ 22: ${rr >= 22 ? 'YES (+1)' : 'no (0)'}\nGCS < 15: ${gcs < 15 ? 'YES (+1)' : 'no (0)'}\nSYS BP ≤ 100: ${sysBP <= 100 ? 'YES (+1)' : 'no (0)'}`;
         }
         if (news2El) {
             news2El.textContent = news2;
             news2El.style.color = colorForScore(news2, 5, 7);
+            news2El.title = `NEWS2 Breakdown:\nHR (0-3): ${Math.min(3, hr < 41 ? 3 : hr < 51 ? 1 : hr < 91 ? 0 : hr < 111 ? 1 : hr < 131 ? 2 : 3)}\nRR (0-3): ${Math.min(3, rr < 9 ? 3 : rr < 12 ? 1 : rr < 21 ? 0 : rr < 25 ? 1 : rr < 31 ? 2 : 3)}\nSYS BP (0-3): ${Math.min(3, sysBP < 91 ? 3 : sysBP < 101 ? 2 : sysBP < 111 ? 1 : sysBP < 220 ? 0 : 3)}\nSpO₂ (0-3): ${Math.min(3, spo2 < 92 ? 3 : spo2 < 95 ? 2 : spo2 < 97 ? 1 : 0)}${onO2 ? ' +2 (on O₂)' : ''}\nTemp (0-3): ${Math.min(3, temp < 35 ? 3 : temp < 36 ? 1 : temp < 38 ? 0 : temp < 39 ? 1 : temp < 41 ? 2 : 3)}\nGCS (0-3): ${gcs < 9 ? 3 : gcs < 13 ? 2 : gcs < 15 ? 1 : 0}`;
         }
 
         // Update GCS display
@@ -410,7 +485,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (gcsTotalDisp) gcsTotalDisp.innerText = state.gcsTotal;
 
         const painEl = document.getElementById('pain-display-value');
-        if (painEl) painEl.textContent = state.painScore;
+        if (painEl) {
+            painEl.textContent = state.painScore;
+            if (state.painScore === 0) painEl.className = 'status-good';
+            else if (state.painScore <= 3) painEl.className = 'status-warning';
+            else if (state.painScore <= 6) painEl.className = 'status-guarded';
+            else painEl.className = 'status-critical';
+        }
         const painScoreDisp = document.getElementById('pain-score-display');
         if (painScoreDisp) painScoreDisp.innerText = state.painScore;
     }
@@ -424,7 +505,9 @@ document.addEventListener('DOMContentLoaded', () => {
             'trend-hr': { key: 'hr', color: '#22c55e', min: 40, max: 160 },
             'trend-bp': { key: 'sys', color: '#ef4444', min: 50, max: 220 },
             'trend-spo2': { key: 'spo2', color: '#00d2ff', min: 70, max: 100 },
-            'trend-temp': { key: 'temp', color: '#f59e0b', min: 34, max: 42 }
+            'trend-temp': { key: 'temp', color: '#f59e0b', min: 34, max: 42 },
+            'trend-rr': { key: 'rr', color: '#a78bfa', min: 4, max: 40 },
+            'trend-etco2': { key: 'etco2', color: '#f97316', min: 10, max: 60 }
         };
 
         for (const [id, cfg] of Object.entries(trendMap)) {
@@ -432,7 +515,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!canvas) continue;
             const ctx = canvas.getContext('2d');
             const W = canvas.width = canvas.parentElement.clientWidth - 16;
-            const H = 20;
+            const H = canvas.height || 24;
             ctx.clearRect(0, 0, W, H);
 
             const points = data.map(d => d[cfg.key]).filter(v => v !== undefined);
@@ -465,7 +548,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Trend Modal
+    // Trend Modal — full multi-parameter view with normal ranges
     function openTrendModal(vital) {
         const modal = document.getElementById('trend-modal');
         if (!modal) return;
@@ -474,81 +557,122 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
         const W = canvas.width = canvas.parentElement.clientWidth - 32;
-        const H = canvas.height = 300;
+        const H = canvas.height = 400;
 
         const data = state.vitalHistory;
-        const configs = {
-            hr: { key: 'hr', label: 'Heart Rate (bpm)', color: '#22c55e', min: 40, max: 160 },
-            spo2: { key: 'spo2', label: 'SpO₂ (%)', color: '#00d2ff', min: 70, max: 100 },
-            bp: { key: 'sys', label: 'SYS BP (mmHg)', color: '#ef4444', min: 50, max: 220 },
-            temp: { key: 'temp', label: 'Temp (°C)', color: '#f59e0b', min: 34, max: 42 }
-        };
+        const configs = [
+            { key: 'hr', label: 'Heart Rate (bpm)', color: '#22c55e', min: 40, max: 160, normalMin: 60, normalMax: 100 },
+            { key: 'spo2', label: 'SpO₂ (%)', color: '#00d2ff', min: 70, max: 100, normalMin: 95, normalMax: 100 },
+            { key: 'sys', label: 'SYS BP (mmHg)', color: '#ef4444', min: 50, max: 220, normalMin: 90, normalMax: 140 },
+            { key: 'temp', label: 'Temp (°C)', color: '#f59e0b', min: 34, max: 42, normalMin: 36.5, normalMax: 37.5 },
+            { key: 'rr', label: 'Respiratory Rate', color: '#a78bfa', min: 4, max: 40, normalMin: 12, normalMax: 20 },
+            { key: 'etco2', label: 'EtCO₂ (mmHg)', color: '#f97316', min: 10, max: 60, normalMin: 35, normalMax: 45 },
+            { key: 'pain', label: 'Pain Score', color: '#fb7185', min: 0, max: 10, normalMin: 0, normalMax: 3 },
+            { key: 'gcs', label: 'GCS', color: '#38bdf8', min: 3, max: 15, normalMin: 15, normalMax: 15 },
+        ];
 
-        const cfg = configs[vital] || configs.hr;
         ctx.clearRect(0, 0, W, H);
 
         // Background
         ctx.fillStyle = '#0a1620';
         ctx.fillRect(0, 0, W, H);
 
-        // Title
-        ctx.fillStyle = 'rgba(255,255,255,0.7)';
-        ctx.font = 'bold 14px sans-serif';
-        ctx.textAlign = 'left';
-        ctx.fillText(cfg.label, 10, 20);
+        const rows = 4;
+        const rowH = (H - 10) / rows;
+        const margin = { top: 6, left: 100, right: 16, gap: 4 };
 
-        const points = data.map(d => d[cfg.key]).filter(v => v !== undefined);
-        if (points.length < 2) {
-            ctx.fillStyle = 'rgba(255,255,255,0.3)';
-            ctx.font = '12px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('Insufficient data', W / 2, H / 2);
-            return;
-        }
+        configs.forEach((cfg, idx) => {
+            const row = Math.floor(idx / 2);
+            const col = idx % 2;
+            const rw = (W - margin.left - margin.right) / 2 - (col === 0 ? 0 : margin.gap / 2);
+            const x0 = margin.left + col * (rw + margin.gap);
+            const y0 = margin.top + row * rowH;
+            const ph = rowH - 2;
+            const pw = rw - 4;
 
-        const margin = { top: 30, bottom: 20, left: 40, right: 20 };
-        const pw = W - margin.left - margin.right;
-        const ph = H - margin.top - margin.bottom;
-        const range = cfg.max - cfg.min;
+            // Background for this strip
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.fillRect(x0, y0, pw, ph);
 
-        // Grid lines
-        ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-        ctx.lineWidth = 0.5;
-        for (let i = 0; i <= 4; i++) {
-            const y = margin.top + (ph / 4) * i;
-            ctx.beginPath(); ctx.moveTo(margin.left, y); ctx.lineTo(W - margin.right, y); ctx.stroke();
-            ctx.fillStyle = 'rgba(255,255,255,0.3)';
-            ctx.font = '9px monospace';
-            ctx.textAlign = 'right';
-            ctx.fillText(Math.round(cfg.max - (range / 4) * i), margin.left - 4, y + 3);
-        }
+            // Label
+            ctx.fillStyle = cfg.color;
+            ctx.font = 'bold 9px sans-serif';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+            ctx.fillText(cfg.label, x0 + 2, y0 + 2);
 
-        // Data line
-        const stepX = pw / Math.max(points.length - 1, 1);
-        ctx.beginPath();
-        ctx.strokeStyle = cfg.color;
-        ctx.lineWidth = 2;
-        for (let i = 0; i < points.length; i++) {
-            const x = margin.left + i * stepX;
-            const y = margin.top + ph - ((points[i] - cfg.min) / range) * ph;
-            if (i === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-        }
-        ctx.stroke();
-
-        // Time axis (show timestamps every ~10 points)
-        ctx.fillStyle = 'rgba(255,255,255,0.3)';
-        ctx.font = '8px monospace';
-        ctx.textAlign = 'center';
-        const interval = Math.max(1, Math.floor(points.length / 6));
-        for (let i = 0; i < points.length; i += interval) {
-            if (data[i]) {
-                const t = new Date(data[i].time);
-                const label = t.getHours().toString().padStart(2,'0') + ':' + t.getMinutes().toString().padStart(2,'0') + ':' + t.getSeconds().toString().padStart(2,'0');
-                const x = margin.left + i * stepX;
-                ctx.fillText(label, x, H - 4);
+            const points = data.map(d => d[cfg.key]).filter(v => v !== undefined && v !== null);
+            if (points.length < 2) {
+                ctx.fillStyle = 'rgba(255,255,255,0.2)';
+                ctx.font = '8px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('—', x0 + pw / 2, y0 + ph / 2 - 4);
+                return;
             }
-        }
+
+            const range = cfg.max - cfg.min;
+            const stepX = pw / Math.max(points.length - 1, 1);
+            const plotArea = ph - 16;
+            const plotTop = y0 + 14;
+
+            // Normal range highlight
+            if (cfg.normalMin !== undefined && cfg.normalMax !== undefined) {
+                const ny1 = plotTop + (cfg.max - cfg.normalMax) / range * plotArea;
+                const ny2 = plotTop + (cfg.max - cfg.normalMin) / range * plotArea;
+                ctx.fillStyle = 'rgba(255,255,255,0.04)';
+                ctx.fillRect(x0 + 2, ny1, pw - 4, ny2 - ny1);
+                // Normal range border lines
+                ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+                ctx.lineWidth = 0.5;
+                ctx.setLineDash([2, 3]);
+                ctx.beginPath(); ctx.moveTo(x0 + 2, ny1); ctx.lineTo(x0 + pw - 2, ny1); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(x0 + 2, ny2); ctx.lineTo(x0 + pw - 2, ny2); ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            // Current value
+            const lastVal = points[points.length - 1];
+            ctx.fillStyle = cfg.color;
+            ctx.font = 'bold 10px monospace';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'top';
+            ctx.fillText(lastVal, x0 + pw - 2, y0 + 2);
+
+            // Data line
+            ctx.beginPath();
+            ctx.strokeStyle = cfg.color;
+            ctx.lineWidth = 1.2;
+            for (let i = 0; i < points.length; i++) {
+                const x = x0 + 2 + i * stepX;
+                const y = plotTop + (cfg.max - points[i]) / range * plotArea;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            // Y-axis labels
+            ctx.fillStyle = 'rgba(255,255,255,0.25)';
+            ctx.font = '7px monospace';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(cfg.max, x0 - 2, plotTop);
+            ctx.fillText(cfg.min, x0 - 2, plotTop + plotArea);
+
+            // Time axis (compact)
+            ctx.fillStyle = 'rgba(255,255,255,0.2)';
+            ctx.font = '6px monospace';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'bottom';
+            const interval = Math.max(1, Math.floor(points.length / 5));
+            for (let i = 0; i < points.length; i += interval) {
+                if (data[i]) {
+                    const t = new Date(data[i].time);
+                    const label = t.getHours().toString().padStart(2,'0') + ':' + t.getMinutes().toString().padStart(2,'0');
+                    const x = x0 + 2 + i * stepX;
+                    ctx.fillText(label, x, y0 + ph - 1);
+                }
+            }
+        });
     }
 
     // --- Teaching Tools (Phase 9) ---
@@ -691,7 +815,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Control Panel Elements
     const settingsBtn = document.getElementById('toggle-controls');
     const settingsModal = document.getElementById('settings-modal');
-    const controlsPanel = document.getElementById('controls-panel');
     const closeControlsBtn = document.getElementById('close-controls');
     const closeControlsTop = document.getElementById('close-controls-top');
 
@@ -751,10 +874,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 idValEl.textContent = data.patient.id || '---';
             }
 
-            const roomEl = document.querySelector('.room');
-            if (roomEl) {
-                const roomNum = data.patient.room || '000';
-                roomEl.textContent = roomNum.toString().startsWith('Room') ? roomNum : `Room ${roomNum}`;
+            // Patient meta (age, weight, room, attending)
+            const metaEl = document.getElementById('patient-meta');
+            if (metaEl) {
+                const dob = new Date(data.patient.dob || '2000-01-01');
+                const ageDiff = Date.now() - dob.getTime();
+                const age = Math.floor(ageDiff / 31557600000);
+                const weight = data.patient.weight || '--';
+                const room = data.patient.room || '--';
+                const attending = data.patient.attending || '--';
+                metaEl.textContent = `${age}y / ${weight} / ${room} / ${attending}`;
+            }
+
+            // Allergies & Code Status
+            const allergyEl = document.getElementById('allergy-badge');
+            if (allergyEl) {
+                allergyEl.textContent = data.patient.allergies || 'NKDA';
+            }
+            const codeEl = document.getElementById('code-status-badge');
+            if (codeEl) {
+                codeEl.textContent = data.patient.codeStatus || 'FULL CODE';
+                const cs = (data.patient.codeStatus || '').toLowerCase();
+                if (cs.includes('dnr') || cs.includes('and') || cs.includes('comfort')) {
+                    codeEl.style.borderColor = 'rgba(251, 191, 36, 0.3)';
+                    codeEl.style.background = 'rgba(251, 191, 36, 0.12)';
+                    codeEl.style.color = 'var(--alarm-warning)';
+                }
             }
 
             // 2. Load Simulation Timeline
@@ -856,6 +1001,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loadData();
 
+    // --- Clock Ticker ---
+    function updateClock() {
+        const clockEl = document.getElementById('dashboard-clock');
+        if (clockEl) {
+            const now = new Date();
+            clockEl.textContent = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+
     // --- Canvas Setup ---
     const ecgCanvas = document.getElementById('ecgCanvas');
     const plethCanvas = document.getElementById('plethCanvas');
@@ -909,6 +1065,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     window.addEventListener('resize', resizeCanvases);
+    window.addEventListener('orientationchange', function() { setTimeout(resizeCanvases, 300); });
     resizeCanvases();
 
     /**
@@ -1133,6 +1290,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function getEcgSignal(t_ms) {
         let signal;
         switch (state.ecgRhythm) {
+            case 'SINUS_ARRHYTHMIA': signal = getNsrSignal(t_ms); break;
             case 'AFIB': signal = getAfibSignal(t_ms); break;
             case 'AFLUTTER': signal = getAflutterSignal(t_ms); break;
             case 'VTACH': signal = getVtachSignal(t_ms); break;
@@ -1154,6 +1312,12 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function getBeatDuration() {
         const baseDuration = 60000 / state.hrTarget;
+        if (state.ecgRhythm === 'SINUS_ARRHYTHMIA') {
+            const respRate = 14;
+            const respPhase = ((Date.now() / 1000) * respRate / 60 * 2 * Math.PI) % (2 * Math.PI);
+            const variation = 0.15 * Math.sin(respPhase);
+            return baseDuration * (1 - variation);
+        }
         if (state.ecgRhythm === 'AFIB') {
             return baseDuration * (0.6 + Math.random() * 0.8); // 60-140% of base
         }
@@ -2166,24 +2330,44 @@ document.addEventListener('DOMContentLoaded', () => {
                         const drug = DRUG_LIB[ad.drugKey];
                         const elapsed = (Date.now() - ad.timeAdministered) / 1000;
                         if (!drug || elapsed < drug.onset) return;
-                        // Epinephrine → arrhythmia risk
+                        // Arrhythmia risk (epinephrine, dobutamine, vasopressin, amiodarone)
                         if (drug.sideEffects.arrhythmiaRisk && Math.random() < 0.02 && state.ecgRhythm === 'NSR') {
                             state.ecgRhythm = 'PVC_BIGEMINY';
                             state.beatCounter = 0;
                         }
-                        // Furosemide → hypokalemia (K+ drops)
+                        // Bradycardia risk (metoprolol, amiodarone)
+                        if (drug.sideEffects.bradycardiaRisk && Math.random() < 0.015) {
+                            state.hrCurrent = Math.max(35, state.hrCurrent - 3);
+                        }
+                        // Hypotension risk (propofol)
+                        if (drug.sideEffects.hypotensionRisk && Math.random() < 0.02) {
+                            const sysDrop = Math.random() * 8 + 3;
+                            const diaDrop = Math.random() * 5 + 2;
+                            state.sys = Math.max(60, state.sys - sysDrop);
+                            state.dia = Math.max(30, state.dia - diaDrop);
+                        }
+                        // Hypokalemia (furosemide)
                         if (drug.sideEffects.hypokalemiaRisk && Math.random() < 0.01) {
                             state.labs.potassium = Math.max(2.5, state.labs.potassium - 0.1);
                             const kDisplay = document.getElementById('lab-potassium');
                             if (kDisplay) kDisplay.innerText = state.labs.potassium.toFixed(1);
                         }
-                        // Morphine → respiratory depression
+                        // Respiratory depression (morphine, fentanyl, propofol, midazolam)
                         if (drug.sideEffects.respDepression && Math.random() < 0.02) {
                             state.rrCurrent = Math.max(6, state.rrCurrent - 1);
                             const rv = document.getElementById('rr-value');
                             if (rv) rv.innerText = state.rrCurrent;
                         }
                     });
+                }
+
+                // During VFIB/arrest: no cardiac output — show dashes
+                if (state.ecgRhythm === 'VFIB') {
+                    hrValue.innerText = '--';
+                    sysValue.innerText = '--';
+                    diaValue.innerText = '--';
+                    const mapEl = document.getElementById('bp-map');
+                    if (mapEl) mapEl.textContent = '--';
                 }
 
                 // Record trend data point
@@ -2241,13 +2425,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const currentEcgY = ecgCenter + getEcgSignal(timeSinceBeat) + noiseOffset;
 
-            // Don't render pleth for VFIB (no cardiac output)
+            // Don't render for VFIB (no cardiac output)
             if (state.ecgRhythm === 'VFIB') {
-                plethCtx.clearRect(0, 0, plethCanvas.width, plethCanvas.height);
-                plethCtx.fillStyle = '#fbbf24';
-                plethCtx.font = 'bold 14px Inter';
-                plethCtx.textAlign = 'center';
-                plethCtx.fillText('NO OUTPUT', plethCanvas.width / 2, plethCanvas.height / 2);
+                const noOutput = (ctx, canvas, color) => {
+                    if (!ctx || !canvas) return;
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.fillStyle = color;
+                    ctx.font = 'bold 14px Inter';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('NO OUTPUT', canvas.width / 2, canvas.height / 2);
+                };
+                noOutput(plethCtx, plethCanvas, '#fbbf24');
+                noOutput(co2Ctx, co2Canvas, '#22c55e');
+                noOutput(alineCtx, alineCanvas, '#ef4444');
             } else {
                 const plethPhase = timeSinceBeat / beatDuration;
                 const plethBase = plethCanvas.height * 0.85;
@@ -2269,8 +2459,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            // Capnography waveform (CO₂)
-            if (co2Ctx && co2Canvas) {
+            // Capnography waveform (CO₂) — skip during VFIB (no cardiac output)
+            if (co2Ctx && co2Canvas && state.ecgRhythm !== 'VFIB') {
                 co2Ctx.strokeStyle = '#22c55e';
                 co2Ctx.lineWidth = 2;
                 // CO2 phase advances with respiratory rate (slower than cardiac)
@@ -2288,8 +2478,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 lastCo2Y = currentCo2Y;
             }
 
-            // Arterial Line waveform
-            if (alineCtx && alineCanvas) {
+            // Arterial Line waveform — skip during VFIB (no cardiac output)
+            if (alineCtx && alineCanvas && state.ecgRhythm !== 'VFIB') {
                 alineCtx.strokeStyle = '#ef4444';
                 alineCtx.lineWidth = 2;
                 const alinePhase = timeSinceBeat / beatDuration;
@@ -2489,7 +2679,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeSpo2Btn = document.getElementById('close-spo2-modal');
 
     if (showSpo2Btn && spo2Modal) {
-        showSpo2Btn.addEventListener('click', () => {
+        showSpo2Btn.addEventListener('click', (e) => {
+            e.stopPropagation();
             spo2Modal.classList.remove('hidden');
             drawSpo2Reference();
         });
@@ -2505,7 +2696,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeHrBtn = document.getElementById('close-hr-modal');
 
     if (showHrBtn && hrModal) {
-        showHrBtn.addEventListener('click', () => {
+        showHrBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
             hrModal.classList.remove('hidden');
             drawHrReference();
         });
@@ -2521,7 +2713,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeBpBtn = document.getElementById('close-bp-modal');
 
     if (showBpBtn && bpModal) {
-        showBpBtn.addEventListener('click', () => {
+        showBpBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
             bpModal.classList.remove('hidden');
             drawBpReference();
         });
@@ -2537,7 +2730,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeTempBtn = document.getElementById('close-temp-modal');
 
     if (showTempBtn && tempModal) {
-        showTempBtn.addEventListener('click', () => {
+        showTempBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
             tempModal.classList.remove('hidden');
         });
     }
@@ -2790,6 +2984,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const rhythmSelect = document.getElementById('rhythm-control');
     quizToggle?.addEventListener('change', (e) => {
         state.quizMode = e.target.checked;
+        document.querySelector('.app-container')?.classList.toggle('quiz-active', state.quizMode);
         if (state.quizMode) {
             if (rhythmSelect) {
                 rhythmSelect.disabled = true;
@@ -2801,6 +2996,16 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (revealBtn) revealBtn.style.display = 'none';
         }
+    });
+
+    // Wire teaching-bar Quiz button to checkbox
+    const quizBarBtn = document.getElementById('btn-quiz-toggle');
+    quizBarBtn?.addEventListener('click', () => {
+        if (quizToggle) {
+            quizToggle.checked = !quizToggle.checked;
+            quizToggle.dispatchEvent(new Event('change'));
+        }
+        quizBarBtn.classList.toggle('active', quizToggle?.checked);
     });
 
     revealBtn?.addEventListener('click', () => {
@@ -2863,6 +3068,103 @@ document.addEventListener('DOMContentLoaded', () => {
         if (el) el.innerText = val;
     }
 
+    function interpretABG() {
+        const el = document.getElementById('abg-interp');
+        if (!el) return;
+        const pH = state.labs.pH;
+        const pCO2 = state.labs.pCO2;
+        const HCO3 = state.labs.HCO3;
+        const BE = state.labs.BE || 0;
+        const lactate = state.labs.lactate || 1.0;
+
+        if (pH === undefined || pCO2 === undefined || HCO3 === undefined) {
+            el.innerHTML = '';
+            return;
+        }
+
+        let acidBase = '';
+        let compensation = '';
+        let winterCheck = '';
+        let paO2Check = '';
+
+        // Primary acid-base disorder
+        if (pH < 7.35) {
+            if (pCO2 > 45) {
+                acidBase = 'Respiratory Acidosis';
+                const expectedHCO3 = 24 + 0.1 * (pCO2 - 40);
+                compensation = HCO3 > expectedHCO3 + 2 ? ' (with metabolic alkalosis — mixed disorder)' :
+                    HCO3 < expectedHCO3 - 2 ? ' (with metabolic acidosis — mixed disorder)' :
+                    ' (acute or appropriately compensated)';
+            } else if (HCO3 < 22) {
+                acidBase = 'Metabolic Acidosis';
+                const expectedPCO2 = 1.5 * HCO3 + 8;
+                compensation = Math.abs(pCO2 - expectedPCO2) <= 5 ? ' (appropriately compensated)' :
+                    pCO2 > expectedPCO2 + 5 ? ' (with respiratory acidosis — mixed disorder)' :
+                    ' (with respiratory alkalosis — mixed disorder)';
+                // Winter's formula
+                const winterPCO2 = 1.5 * HCO3 + 8;
+                const winterRange = 2;
+                winterCheck = `Winter's: expected pCO₂ ${winterPCO2.toFixed(1)} ± ${winterRange}`;
+                if (pCO2 < winterPCO2 - winterRange) winterCheck += ' (additional respiratory alkalosis)';
+                else if (pCO2 > winterPCO2 + winterRange) winterCheck += ' (additional respiratory acidosis)';
+                else winterCheck += ' (appropriate compensation)';
+            } else {
+                acidBase = 'Unclassified Acidosis';
+            }
+        } else if (pH > 7.45) {
+            if (pCO2 < 35) {
+                acidBase = 'Respiratory Alkalosis';
+                const expectedHCO3 = 24 - 0.2 * (40 - pCO2);
+                compensation = HCO3 < expectedHCO3 - 2 ? ' (with metabolic acidosis — mixed disorder)' :
+                    HCO3 > expectedHCO3 + 2 ? ' (with metabolic alkalosis — mixed disorder)' :
+                    ' (acute or appropriately compensated)';
+            } else if (HCO3 > 28) {
+                acidBase = 'Metabolic Alkalosis';
+                const expectedPCO2 = 0.7 * HCO3 + 20;
+                compensation = Math.abs(pCO2 - expectedPCO2) <= 5 ? ' (appropriately compensated)' :
+                    pCO2 > expectedPCO2 + 5 ? ' (with respiratory acidosis — mixed disorder)' :
+                    ' (with respiratory alkalosis — mixed disorder)';
+            } else {
+                acidBase = 'Unclassified Alkalosis';
+            }
+        } else {
+            // Normal pH — check for compensated disorders
+            if (pCO2 > 45 && HCO3 > 28) {
+                acidBase = 'Compensated Respiratory Acidosis';
+            } else if (pCO2 < 35 && HCO3 < 22) {
+                acidBase = 'Compensated Metabolic Acidosis';
+            } else if (pCO2 > 45 || HCO3 > 28) {
+                acidBase = 'Mixed alkalosis/acidosis (normal pH)';
+            } else if (pCO2 < 35 || HCO3 < 22) {
+                acidBase = 'Mixed alkalosis/acidosis (normal pH)';
+            } else {
+                acidBase = 'Normal';
+            }
+        }
+
+        // PaO₂ check
+        if (state.labs.pO2 !== undefined) {
+            const pO2 = state.labs.pO2;
+            if (pO2 < 60) paO2Check = `<span style="color:var(--alarm-crisis)">Severe hypoxemia (pO₂ ${pO2})</span>`;
+            else if (pO2 < 80) paO2Check = `<span style="color:var(--alarm-warning)">Moderate hypoxemia (pO₂ ${pO2})</span>`;
+            else if (pO2 < 95) paO2Check = `<span style="color:var(--alarm-advisory)">Mild hypoxemia (pO₂ ${pO2})</span>`;
+            else paO2Check = `<span style="color:var(--color-hr)">Normal oxygenation (pO₂ ${pO2})</span>`;
+        }
+
+        // Lactate
+        const lactateCheck = lactate > 4 ? `<br>⚠ <span style="color:var(--alarm-crisis)">Lactate ${lactate.toFixed(1)} mmol/L — severe hyperlactatemia</span>` :
+            lactate > 2 ? `<br>⚠ <span style="color:var(--alarm-warning)">Lactate ${lactate.toFixed(1)} mmol/L — mild hyperlactatemia</span>` :
+            '';
+
+        const severity = acidBase === 'Normal' ? 'var(--color-hr)' :
+            acidBase.includes('Compensated') ? 'var(--alarm-advisory)' :
+            'var(--alarm-crisis)';
+
+        el.innerHTML = `<strong style="color:${severity}">${acidBase}</strong>${compensation}${lactateCheck}
+${winterCheck ? `<br><span style="color:var(--text-muted);font-size:0.55rem;">${winterCheck}</span>` : ''}
+<br><span style="font-size:0.55rem;">${paO2Check}${lactate > 2 ? '' : ''} | BE: ${BE >= 0 ? '+' : ''}${BE.toFixed(1)}</span>`;
+    }
+
     Object.entries(labSliders).forEach(([sliderId, stateKey]) => {
         const slider = document.getElementById(sliderId);
         if (!slider) return;
@@ -2884,6 +3186,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (rhythmSel) rhythmSel.value = 'NSR';
                     state.beatCounter = 0;
                 }
+            }
+
+            // Update ABG interpretation when key values change
+            if (['pH', 'pCO2', 'HCO3', 'BE', 'lactate', 'pO2'].includes(stateKey)) {
+                interpretABG();
             }
         });
     });
@@ -2928,11 +3235,46 @@ document.addEventListener('DOMContentLoaded', () => {
     const drugDose = document.getElementById('drug-dose');
     const drugDesc = document.getElementById('drug-description');
 
+    const INTERACTION_LABELS = {
+        synergisticPressor: '⚠ Synergistic pressor effect — risk of dangerous hypertension',
+        increasedArrhythmia: '⚠ Increased arrhythmia risk with concurrent use',
+        synergisticRespDepression: '⚠ Synergistic respiratory depression — monitor RR and SpO₂',
+        antagonistic: '⚠ Antagonistic effects — drugs may counteract each other'
+    };
+
+    function checkDrugInteractions(drugKey) {
+        const drug = DRUG_LIB[drugKey];
+        if (!drug || !drug.interactions) return [];
+        const now = Date.now();
+        const warnings = [];
+        for (const ad of state.activeDrugs) {
+            const elapsed = (now - ad.timeAdministered) / 1000;
+            const activeDrug = DRUG_LIB[ad.drugKey];
+            if (!activeDrug || elapsed > activeDrug.duration) continue;
+            const interactionKey = drug.interactions[ad.drugKey];
+            if (interactionKey && INTERACTION_LABELS[interactionKey]) {
+                warnings.push(`${drug.name} + ${activeDrug.name}: ${INTERACTION_LABELS[interactionKey]}`);
+            }
+        }
+        return warnings;
+    }
+
     function updateDrugDescription() {
         const key = drugSelect?.value;
         const drug = DRUG_LIB[key];
         if (drugDesc && drug) {
             drugDesc.textContent = drug.description + '. Onset: ' + drug.onset + 's, Duration: ' + (drug.duration / 60).toFixed(0) + 'min';
+        }
+        const warnEl = document.getElementById('drug-warning');
+        if (warnEl && key) {
+            const warnings = checkDrugInteractions(key);
+            if (warnings.length > 0) {
+                warnEl.style.display = 'block';
+                warnEl.innerHTML = warnings.join('<br>');
+            } else {
+                warnEl.style.display = 'none';
+                warnEl.innerHTML = '';
+            }
         }
     }
     drugSelect?.addEventListener('change', updateDrugDescription);
@@ -2942,7 +3284,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const list = document.getElementById('active-drugs-list');
         if (!list) return;
         if (state.activeDrugs.length === 0) {
-            list.innerHTML = '<span style="color:var(--page-text-muted);">None</span>';
+            list.innerHTML = '<span style="color:var(--text-muted);">None</span>';
             return;
         }
         const now = Date.now();
@@ -2952,7 +3294,54 @@ document.addEventListener('DOMContentLoaded', () => {
             const elapsed = ((now - ad.timeAdministered) / 1000 / 60).toFixed(1);
             return `<div style="display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
                 <span style="color:#22c55e;">${drug.name}</span>
-                <span style="color:var(--page-text-muted);">${elapsed}min ago</span>
+                <span style="color:var(--text-muted);">${elapsed}min ago</span>
+            </div>`;
+        }).join('');
+    }
+
+    // --- Scenario Event Log ---
+    function addEvent(icon, text) {
+        state.scenarioEvents.push({ time: Date.now(), icon, text });
+        updateEventLog();
+    }
+
+    function updateEventLog() {
+        const list = document.getElementById('event-log-list');
+        if (!list) return;
+        if (state.scenarioEvents.length === 0) {
+            list.innerHTML = '<span style="color:var(--text-muted);font-size:0.6rem;">No events recorded</span>';
+            return;
+        }
+        const recent = state.scenarioEvents.slice(-50).reverse();
+        list.innerHTML = recent.map(e => {
+            const t = new Date(e.time);
+            const ts = t.getHours().toString().padStart(2,'0') + ':' + t.getMinutes().toString().padStart(2,'0') + ':' + t.getSeconds().toString().padStart(2,'0');
+            return `<div class="event-item"><span class="event-time">${ts}</span><span class="event-icon">${e.icon}</span><span class="event-text">${e.text}</span></div>`;
+        }).join('');
+    }
+
+    function updateInfusionsPanel() {
+        const panel = document.getElementById('infusions-panel');
+        const list = document.getElementById('infusions-list');
+        if (!panel || !list) return;
+        const now = Date.now();
+        const active = state.activeDrugs.filter(ad => {
+            const drug = DRUG_LIB[ad.drugKey];
+            const elapsed = (now - ad.timeAdministered) / 1000;
+            return drug && elapsed < drug.duration;
+        });
+        if (active.length === 0) {
+            panel.style.display = 'none';
+            return;
+        }
+        panel.style.display = '';
+        list.innerHTML = active.map(ad => {
+            const drug = DRUG_LIB[ad.drugKey];
+            const elapsed = ((now - ad.timeAdministered) / 1000 / 60).toFixed(1);
+            const doseLabel = ad.dose === 0.5 ? 'Low' : ad.dose === 1 ? 'Std' : 'High';
+            return `<div class="infusion-item">
+                <span class="infusion-drug">${drug.name}</span>
+                <span class="infusion-meta">${doseLabel} · ${elapsed}min ago</span>
             </div>`;
         }).join('');
     }
@@ -2962,26 +3351,47 @@ document.addEventListener('DOMContentLoaded', () => {
         const dose = parseFloat(drugDose?.value || '1');
         if (!key || !DRUG_LIB[key]) return;
 
+        const drugName = DRUG_LIB[key].name;
+        const doseLabel = dose === 0.5 ? 'Low' : dose === 1 ? 'Std' : 'High';
+
         state.activeDrugs.push({
             drugKey: key,
             dose: dose,
             timeAdministered: Date.now()
         });
 
+        addEvent('💉', `${drugName} (${doseLabel}) administered`);
         updateActiveDrugsDisplay();
+        updateInfusionsPanel();
         // Close modal
         drugModal?.classList.add('hidden');
     });
 
-    // Update active drugs display every 5 seconds
+    // Update active drugs displays every 5 seconds
     setInterval(updateActiveDrugsDisplay, 5000);
+    setInterval(updateInfusionsPanel, 5000);
+
+    // Wire up the infusion panel syringe button
+    document.getElementById('btn-open-drugs')?.addEventListener('click', () => {
+        drugModal?.classList.remove('hidden');
+        updateActiveDrugsDisplay();
+        updateDrugDescription();
+    });
 
     // --- Nurse Call Snowflake Effect ---
     const callBtn = document.getElementById('btn-call');
+    // Nurse call banner element
+    const callBanner = document.createElement('div');
+    callBanner.className = 'nurse-call-banner';
+    callBanner.textContent = '🔔 NURSE CALL ACTIVATED';
+    document.body.appendChild(callBanner);
+
     callBtn?.addEventListener('click', () => {
         const duration = 5000;
         const end = Date.now() + duration;
         const snowflakes = ['❄', '❅', '❆', '•'];
+        callBanner.classList.add('active');
+        setTimeout(() => callBanner.classList.remove('active'), duration);
 
         const interval = setInterval(() => {
             if (Date.now() > end) {
@@ -3104,6 +3514,45 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('close-icuboard-modal')?.addEventListener('click', () => icuboardModal?.classList.add('hidden'));
     icuboardModal?.addEventListener('click', (e) => { if (e.target === icuboardModal) icuboardModal.classList.add('hidden'); });
 
+    // Global Escape key & focus trap — closes any open modal
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            document.querySelectorAll('.modal:not(.hidden)').forEach(m => m.classList.add('hidden'));
+        }
+    });
+
+    function trapFocus(modal) {
+        if (!modal) return;
+        const focusable = modal.querySelectorAll('button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        modal.addEventListener('keydown', function handler(e) {
+            if (e.key !== 'Tab') return;
+            if (e.shiftKey) {
+                if (document.activeElement === first) {
+                    e.preventDefault();
+                    last.focus();
+                }
+            } else {
+                if (document.activeElement === last) {
+                    e.preventDefault();
+                    first.focus();
+                }
+            }
+        });
+        setTimeout(() => first.focus(), 50);
+    }
+
+    // Wire focus trap to modal opening
+    const allModalTriggers = document.querySelectorAll('[id$="-modal"]');
+    allModalTriggers.forEach(modal => {
+        const observer = new MutationObserver(() => {
+            if (!modal.classList.contains('hidden')) trapFocus(modal);
+        });
+        observer.observe(modal, { attributes: true, attributeFilter: ['class'] });
+    });
+
     function updateICUBoard() {
         const ids = { 'icu-hr': state.hrCurrent, 'icu-bp': parseInt(sysValue.innerText) + '/' + parseInt(diaValue.innerText),
             'icu-map': Math.round(parseInt(diaValue.innerText) * 2/3 + parseInt(sysValue.innerText) * 1/3),
@@ -3217,7 +3666,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         tempDisplay.innerText = val.toFixed(1);
         tempValue.innerText = val.toFixed(1);
-        alarmsAcknowledged = false;
         checkAlarms();
     });
 
@@ -3281,9 +3729,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const rhythmControl = document.getElementById('rhythm-control');
     rhythmControl?.addEventListener('change', (e) => {
         triggerManualOverride();
+        const prev = state.ecgRhythm;
         state.ecgRhythm = e.target.value;
         state.beatCounter = 0;
         state.droppedBeats = 0;
+        if (prev !== state.ecgRhythm) {
+            addEvent('💓', `Rhythm change: ${prev} → ${state.ecgRhythm}`);
+        }
         // Reset ECG canvas for clean transition
         ecgCtx.clearRect(0, 0, ecgCanvas.width, ecgCanvas.height);
         plethCtx.clearRect(0, 0, plethCanvas.width, plethCanvas.height);
@@ -3437,55 +3889,4 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize scales on load
     setupClinicalScales();
 
-    // --- Social Interactions & Stats Logic (localStorage persistence) ---
-    const likeBtn = document.getElementById('btn-like');
-    const dislikeBtn = document.getElementById('btn-dislike');
-    const likeCountEl = document.getElementById('like-count');
-    const dislikeCountEl = document.getElementById('dislike-count');
-    const visitorEl = document.getElementById('visitor-count');
-
-    function getLocalStats() {
-        try {
-            const raw = localStorage.getItem('healthsim_stats');
-            if (raw) return JSON.parse(raw);
-        } catch (_) { }
-        return { likes: 0, dislikes: 0, visitorCount: 1248 };
-    }
-
-    function saveLocalStats(data) {
-        try { localStorage.setItem('healthsim_stats', JSON.stringify(data)); } catch (_) { }
-    }
-
-    function updateStatsUI() {
-        const data = getLocalStats();
-        if (likeCountEl) likeCountEl.textContent = (data.likes || 0).toLocaleString();
-        if (dislikeCountEl) dislikeCountEl.textContent = (data.dislikes || 0).toLocaleString();
-        if (visitorEl) visitorEl.textContent = (data.visitorCount || 0).toLocaleString();
-
-        // visitor count drift
-        let count = data.visitorCount;
-        setInterval(() => {
-            if (Math.random() > 0.85) {
-                count += Math.floor(Math.random() * 2);
-                const d = getLocalStats();
-                d.visitorCount = count;
-                saveLocalStats(d);
-                if (visitorEl) visitorEl.textContent = count.toLocaleString();
-            }
-        }, 25000);
-    }
-
-    function handleAction(action) {
-        const data = getLocalStats();
-        if (action === 'like') data.likes++;
-        else if (action === 'dislike') data.dislikes++;
-        saveLocalStats(data);
-        if (likeCountEl) likeCountEl.textContent = (data.likes || 0).toLocaleString();
-        if (dislikeCountEl) dislikeCountEl.textContent = (data.dislikes || 0).toLocaleString();
-    }
-
-    likeBtn?.addEventListener('click', () => handleAction('like'));
-    dislikeBtn?.addEventListener('click', () => handleAction('dislike'));
-
-    updateStatsUI();
 });

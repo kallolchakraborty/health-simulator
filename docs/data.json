@@ -9,7 +9,9 @@
         "height": "172cm",
         "weight": "65kg",
         "room": "Room 007",
-        "condition": "GOOD"
+        "condition": "GOOD",
+        "allergies": "NKDA",
+        "codeStatus": "FULL CODE"
     },
     "simulation": {
         "description": "Realistic 60-min physiological simulation",
