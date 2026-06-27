@@ -50,8 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
         droppedBeats: 0,     // Consecutive dropped beats for AV block
         scenarioTimer: 0,    // Scenario event timer
         activeScenario: null, // Currently running scenario
-        patientAllergies: 'NKDA',
-        patientCodeStatus: 'FULL CODE',
+
         vitalHistory: [],     // Trend data: [{ time, hr, spo2, sys, dia, rr, temp, gcs, pain }]
         alarmHistory: [],     // { time, level, vital, value, threshold, msg }
         scenarioEvents: [],   // { time, icon, text }
@@ -293,7 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
             name: 'Anaphylaxis',
             duration: 300,
             events: [
-                { time: 0, hr: 90, sys: 125, dia: 80, spo2: 98, temp: 36.8, rhythm: 'NSR', gcs: 15, pain: 0, allergies: 'Penicillin', narrative: 'Patient received antibiotic' },
+                { time: 0, hr: 90, sys: 125, dia: 80, spo2: 98, temp: 36.8, rhythm: 'NSR', gcs: 15, pain: 0, narrative: 'Patient received antibiotic' },
                 { time: 30, hr: 105, sys: 110, dia: 65, spo2: 95, temp: 36.9, rhythm: 'NSR', gcs: 15, pain: 2, narrative: 'Urticaria, wheezing — anaphylaxis suspected' },
                 { time: 60, hr: 120, sys: 95, dia: 55, spo2: 91, temp: 37.0, rhythm: 'NSR', gcs: 14, pain: 3, narrative: 'Hypotension, bronchospasm — give epinephrine' },
                 { time: 90, hr: 115, sys: 100, dia: 60, spo2: 93, temp: 37.0, rhythm: 'NSR', gcs: 15, pain: 2, narrative: 'Post-epinephrine: slight improvement' },
@@ -318,7 +317,7 @@ document.addEventListener('DOMContentLoaded', () => {
             name: 'COPD Exacerbation',
             duration: 300,
             events: [
-                { time: 0, hr: 88, sys: 135, dia: 85, spo2: 92, temp: 37.1, rhythm: 'NSR', gcs: 15, pain: 2, codeStatus: 'DNR/DNI', narrative: 'SOB, productive cough, wheeze', labs: { pH: 7.38, pCO2: 48, pO2: 68, HCO3: 28 } },
+                { time: 0, hr: 88, sys: 135, dia: 85, spo2: 92, temp: 37.1, rhythm: 'NSR', gcs: 15, pain: 2, narrative: 'SOB, productive cough, wheeze', labs: { pH: 7.38, pCO2: 48, pO2: 68, HCO3: 28 } },
                 { time: 60, hr: 95, sys: 140, dia: 88, spo2: 89, temp: 37.3, rhythm: 'SINUS_ARRHYTHMIA', gcs: 15, pain: 3, onO2: true, narrative: 'Hypoxemic — start supplemental O₂', labs: { pH: 7.35, pCO2: 52, pO2: 60, HCO3: 29 } },
                 { time: 120, hr: 100, sys: 138, dia: 86, spo2: 91, temp: 37.4, rhythm: 'SINUS_ARRHYTHMIA', gcs: 15, pain: 2, onO2: true, narrative: 'On 2L O₂, mild improvement', labs: { pH: 7.36, pCO2: 50, pO2: 72, HCO3: 29 } },
                 { time: 180, hr: 92, sys: 135, dia: 84, spo2: 93, temp: 37.2, rhythm: 'NSR', gcs: 15, pain: 1, onO2: true, narrative: 'Nebulizers given, breathing easier', labs: { pH: 7.37, pCO2: 48, pO2: 78, HCO3: 28 } },
@@ -888,14 +887,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 metaEl.textContent = `${age}y / ${weight} / ${room} / ${attending}`;
             }
 
-            // Allergies & Code Status — sync state + UI + controls
-            state.patientAllergies = data.patient.allergies || 'NKDA';
-            state.patientCodeStatus = data.patient.codeStatus || 'FULL CODE';
-            updatePatientBadges(state.patientAllergies, state.patientCodeStatus);
-            const aCtrl = document.getElementById('allergies-control');
-            if (aCtrl) aCtrl.value = state.patientAllergies;
-            const cCtrl = document.getElementById('code-status-control');
-            if (cCtrl) cCtrl.value = state.patientCodeStatus;
+
 
             // 2. Load Simulation Timeline
             if (data.simulation && data.simulation.timeline) {
@@ -3029,44 +3021,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Lab Values (Phase 5) ---
     const labBtn = document.getElementById('btn-labs');
-    // --- Allergies & Code Status Controls ---
-    function updatePatientBadges(allergies, codeStatus) {
-        const allergyEl = document.getElementById('allergy-badge');
-        const codeEl = document.getElementById('code-status-badge');
-        if (allergyEl) {
-            allergyEl.textContent = allergies || 'NKDA';
-            const isNKDA = (allergies || '').toUpperCase() === 'NKDA';
-            allergyEl.style.borderColor = isNKDA ? 'rgba(239, 68, 68, 0.3)' : 'rgba(251, 191, 36, 0.3)';
-            allergyEl.style.background = isNKDA ? 'rgba(239, 68, 68, 0.15)' : 'rgba(251, 191, 36, 0.12)';
-            allergyEl.style.color = isNKDA ? 'var(--alarm-crisis)' : 'var(--alarm-warning)';
-        }
-        if (codeEl) {
-            codeEl.textContent = codeStatus || 'FULL CODE';
-            const cs = (codeStatus || '').toLowerCase();
-            if (cs.includes('dnr') || cs.includes('and') || cs.includes('comfort')) {
-                codeEl.style.borderColor = 'rgba(251, 191, 36, 0.3)';
-                codeEl.style.background = 'rgba(251, 191, 36, 0.12)';
-                codeEl.style.color = 'var(--alarm-warning)';
-            } else {
-                codeEl.style.borderColor = 'rgba(74, 222, 128, 0.25)';
-                codeEl.style.background = 'rgba(74, 222, 128, 0.12)';
-                codeEl.style.color = 'var(--color-hr)';
-            }
-        }
-    }
-
-    const allergiesCtrl = document.getElementById('allergies-control');
-    allergiesCtrl?.addEventListener('change', (e) => {
-        state.patientAllergies = e.target.value;
-        updatePatientBadges(e.target.value, state.patientCodeStatus);
-    });
-
-    const codeStatusCtrl = document.getElementById('code-status-control');
-    codeStatusCtrl?.addEventListener('change', (e) => {
-        state.patientCodeStatus = e.target.value;
-        updatePatientBadges(state.patientAllergies, e.target.value);
-    });
-
     const labModal = document.getElementById('lab-modal');
     labBtn?.addEventListener('click', () => {
         labModal?.classList.remove('hidden');
@@ -3806,15 +3760,7 @@ ${winterCheck ? `<br><span style="color:var(--text-muted);font-size:0.55rem;">${
                 state.tempTarget = initEvt.temp || state.tempTarget;
                 state.ecgRhythm = initEvt.rhythm || 'NSR';
                 if (initEvt.rr) state.rrTarget = initEvt.rr;
-                if (initEvt.allergies) state.patientAllergies = initEvt.allergies;
-                if (initEvt.codeStatus) state.patientCodeStatus = initEvt.codeStatus;
-                if (initEvt.allergies || initEvt.codeStatus) {
-                    updatePatientBadges(state.patientAllergies, state.patientCodeStatus);
-                    const aCtrl = document.getElementById('allergies-control');
-                    if (aCtrl) aCtrl.value = state.patientAllergies;
-                    const cCtrl = document.getElementById('code-status-control');
-                    if (cCtrl) cCtrl.value = state.patientCodeStatus;
-                }
+
                 if (initEvt.gcs !== undefined) {
                     state.gcsTotal = initEvt.gcs;
                     let remainder = state.gcsTotal;

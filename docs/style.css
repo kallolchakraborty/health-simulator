@@ -213,34 +213,6 @@ input[type="range"] { touch-action: none; }
     text-overflow: ellipsis;
 }
 
-/* --- Patient Badges (Allergies, Code Status) --- */
-.patient-badges {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-shrink: 0;
-}
-.badge {
-    font-size: 0.55rem;
-    font-weight: 800;
-    padding: 3px 8px;
-    border-radius: 4px;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    white-space: nowrap;
-    line-height: 1;
-}
-.badge-allergy {
-    background: rgba(239, 68, 68, 0.15);
-    color: var(--alarm-crisis);
-    border: 1px solid rgba(239, 68, 68, 0.3);
-}
-.badge-code {
-    background: rgba(74, 222, 128, 0.12);
-    color: var(--color-hr);
-    border: 1px solid rgba(74, 222, 128, 0.25);
-}
-
 /* --- Dashboard Clock --- */
 .dashboard-clock {
     font-family: 'IBM Plex Mono', monospace;
@@ -1625,7 +1597,6 @@ canvas {
     .avatar-initials { width: 28px; height: 28px; font-size: 0.7rem; border-radius: 6px; }
     .details .name { font-size: 0.7rem; max-width: 100px; }
     .details .id { font-size: 0.55rem; }
-    .patient-badges { display: none; }
     .dashboard-clock { display: none; }
     .status-panel { flex-wrap: wrap; gap: 3px; }
     .status-item { padding-right: 6px; gap: 0; }
