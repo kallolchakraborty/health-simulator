@@ -1,0 +1,23 @@
+{
+    "name": "Health Simulator — ICU Critical Care Training",
+    "short_name": "Health Sim",
+    "description": "High-fidelity ICU critical care training simulator for junior doctors",
+    "start_url": "/Health-Simulator/",
+    "display": "standalone",
+    "background_color": "#0a1620",
+    "theme_color": "#0a1620",
+    "icons": [
+        {
+            "src": "favicon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "logo.svg",
+            "sizes": "512x512",
+            "type": "image/svg+xml",
+            "purpose": "any"
+        }
+    ]
+}
